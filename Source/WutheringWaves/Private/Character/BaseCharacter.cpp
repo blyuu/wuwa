@@ -5,7 +5,7 @@
 #include "Character/WuwaInputConfig.h"
 #include "GameFramework/SpringArmComponent.h"
 
-#include "GameFramework/CharacterMovementComponent.h" // 헤더 상단 추가 확인
+#include "GameFramework/CharacterMovementComponent.h" 
 
 ABaseCharacter::ABaseCharacter()
 {
@@ -30,7 +30,7 @@ ABaseCharacter::ABaseCharacter()
     
 
 	GetCharacterMovement()->bOrientRotationToMovement = true;
-	GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f); // 회전 부드러움 속도
+	GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f); 
 
 	InputMappingContext = nullptr;
 }
@@ -80,7 +80,7 @@ void ABaseCharacter::Move(const FInputActionValue& value)
     
 	
 	const FRotator ControlRotation = Controller->GetControlRotation();
-	const FRotator YawRotation(0.0f, ControlRotation.Yaw, 0.0f); // 평면 회전값만 추출
+	const FRotator YawRotation(0.0f, ControlRotation.Yaw, 0.0f);
     
 	
 	const FVector CameraForward = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
