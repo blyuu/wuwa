@@ -5,26 +5,34 @@
 #include "Character/WuwaInputConfig.h"
 #include "GameFramework/SpringArmComponent.h"
 
+#include "GameFramework/CharacterMovementComponent.h" // 헤더 상단 추가 확인
 
 ABaseCharacter::ABaseCharacter()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	
+    
 	CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	SpringArmComponent = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
-	
+    
 	SpringArmComponent->SetupAttachment(RootComponent);
-	SpringArmComponent->TargetArmLength = 300.0f;
-	SpringArmComponent->bUsePawnControlRotation = true;
+	SpringArmComponent->TargetArmLength = 250.0f;
 	
 	CameraComponent->SetupAttachment(SpringArmComponent);
+    
+
+	SpringArmComponent->bUsePawnControlRotation = true; 
 	CameraComponent->bUsePawnControlRotation = false;
+    
 	
-	//Initialize
+	bUseControllerRotationYaw = false; 
+	bUseControllerRotationPitch = false;
+	bUseControllerRotationRoll = false;
+    
+
+	GetCharacterMovement()->bOrientRotationToMovement = true;
+	GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f); // 회전 부드러움 속도
+
 	InputMappingContext = nullptr;
-	
-	
-	
 }
 
 void ABaseCharacter::BeginPlay()
@@ -67,30 +75,38 @@ void ABaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 void ABaseCharacter::Move(const FInputActionValue& value)
 {
 	if (!Controller) return;
-	
+    
 	FVector2D InputVal = value.Get<FVector2D>();
+    
+	
+	const FRotator ControlRotation = Controller->GetControlRotation();
+	const FRotator YawRotation(0.0f, ControlRotation.Yaw, 0.0f); // 평면 회전값만 추출
+    
+	
+	const FVector CameraForward = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+	const FVector CameraRight   = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+    
 	
 	if (!FMath::IsNearlyZero(InputVal.X))
 	{
-		AddMovementInput(GetActorForwardVector(),InputVal.X);
+		AddMovementInput(CameraForward, InputVal.X);
 	}
-	
+    
 	if (!FMath::IsNearlyZero(InputVal.Y))
 	{
-		AddMovementInput(GetActorRightVector(),InputVal.Y);
+		AddMovementInput(CameraRight, InputVal.Y);
 	}
 }
 
 void ABaseCharacter::Look(const FInputActionValue& value)
 {
 	if (!Controller) return;
-	
+    
 	FVector2D Inputval = value.Get<FVector2D>();
-	
+    
 	if (!Inputval.IsNearlyZero())
 	{
 		AddControllerYawInput(Inputval.X);
 		AddControllerPitchInput(Inputval.Y);
 	}
 }
-

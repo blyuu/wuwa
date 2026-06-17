@@ -36,5 +36,6 @@ protected:
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	TObjectPtr<class UInputMappingContext> InputMappingContext;
 	
-
+	
+	bool IsRotate = false;
 };
