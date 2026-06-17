@@ -1,34 +1,96 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "Character/BaseCharacter.h"
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
+#include "Camera/CameraComponent.h"
+#include "Character/WuwaInputConfig.h"
+#include "GameFramework/SpringArmComponent.h"
 
-// Sets default values
+
 ABaseCharacter::ABaseCharacter()
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
+	
+	CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
+	SpringArmComponent = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
+	
+	SpringArmComponent->SetupAttachment(RootComponent);
+	SpringArmComponent->TargetArmLength = 300.0f;
+	SpringArmComponent->bUsePawnControlRotation = true;
+	
+	CameraComponent->SetupAttachment(SpringArmComponent);
+	CameraComponent->bUsePawnControlRotation = false;
+	
+	//Initialize
+	InputMappingContext = nullptr;
+	
+	
+	
 }
 
-// Called when the game starts or when spawned
 void ABaseCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	//IMC Mapping
+	
+	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+		{
+			if (InputMappingContext)
+			{
+				Subsystem->AddMappingContext(InputMappingContext,0);
+			}
+		}
+	}
 }
 
-// Called every frame
+
 void ABaseCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
 }
 
-// Called to bind functionality to input
 void ABaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
+	
+	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
+	{
+		EnhancedInputComponent->BindAction(WuwaInputConfig->InputLook, ETriggerEvent::Triggered, this, &ABaseCharacter::Look);
+		EnhancedInputComponent->BindAction(WuwaInputConfig->InputMove, ETriggerEvent::Triggered, this, &ABaseCharacter::Move);
+		
+	}
+}
 
+void ABaseCharacter::Move(const FInputActionValue& value)
+{
+	if (!Controller) return;
+	
+	FVector2D InputVal = value.Get<FVector2D>();
+	
+	if (!FMath::IsNearlyZero(InputVal.X))
+	{
+		AddMovementInput(GetActorForwardVector(),InputVal.X);
+	}
+	
+	if (!FMath::IsNearlyZero(InputVal.Y))
+	{
+		AddMovementInput(GetActorRightVector(),InputVal.Y);
+	}
+}
+
+void ABaseCharacter::Look(const FInputActionValue& value)
+{
+	if (!Controller) return;
+	
+	FVector2D Inputval = value.Get<FVector2D>();
+	
+	if (!Inputval.IsNearlyZero())
+	{
+		AddControllerYawInput(Inputval.X);
+		AddControllerPitchInput(Inputval.Y);
+	}
 }
 

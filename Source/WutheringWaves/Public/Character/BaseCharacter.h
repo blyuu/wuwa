@@ -1,9 +1,8 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "InputActionValue.h"
 #include "BaseCharacter.generated.h"
 
 UCLASS()
@@ -12,18 +11,30 @@ class WUTHERINGWAVES_API ABaseCharacter : public ACharacter
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
 	ABaseCharacter();
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
 public:	
-	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-
-	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	void Move(const FInputActionValue& value);
+	void Look(const FInputActionValue& value);
+
+protected:
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TObjectPtr<class UCameraComponent> CameraComponent;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TObjectPtr<class USpringArmComponent> SpringArmComponent;
+	
+	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	TObjectPtr<class UWuwaInputConfig> WuwaInputConfig;
+	
+	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	TObjectPtr<class UInputMappingContext> InputMappingContext;
+	
 
 };
