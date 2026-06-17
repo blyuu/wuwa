@@ -118,17 +118,17 @@ void ABaseCharacter::MouseWheel(const FInputActionValue& value)
 	
 	if (WheelValue > 0)
 	{
-		while(SpringArmComponent->TargetArmLength > 50)
+		if (SpringArmComponent->TargetArmLength > 50.0f)
 		{
-			SpringArmComponent->TargetArmLength -= 0.5f;
+			SpringArmComponent->TargetArmLength -= 5.f;
 		}
 	}
 	
 	if (WheelValue < 0)
 	{
-		while (SpringArmComponent->TargetArmLength < 250)
+		if (SpringArmComponent->TargetArmLength < 250)
 		{
-			SpringArmComponent->TargetArmLength += 0.5f;
+			SpringArmComponent->TargetArmLength += 5.f;
 		}
 	}
 	
