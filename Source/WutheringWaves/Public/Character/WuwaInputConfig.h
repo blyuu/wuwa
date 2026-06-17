@@ -21,4 +21,7 @@ public:
 	
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	TObjectPtr<UInputAction> InputJump;
+	
+	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	TObjectPtr<UInputAction> InputMouseWheel;
 };

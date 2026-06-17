@@ -68,6 +68,7 @@ void ABaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	{
 		EnhancedInputComponent->BindAction(WuwaInputConfig->InputLook, ETriggerEvent::Triggered, this, &ABaseCharacter::Look);
 		EnhancedInputComponent->BindAction(WuwaInputConfig->InputMove, ETriggerEvent::Triggered, this, &ABaseCharacter::Move);
+		EnhancedInputComponent->BindAction(WuwaInputConfig->InputMouseWheel, ETriggerEvent::Triggered, this, &ABaseCharacter::MouseWheel);
 		
 	}
 }
@@ -109,4 +110,27 @@ void ABaseCharacter::Look(const FInputActionValue& value)
 		AddControllerYawInput(Inputval.X);
 		AddControllerPitchInput(Inputval.Y);
 	}
+}
+
+void ABaseCharacter::MouseWheel(const FInputActionValue& value)
+{
+	float WheelValue = value.Get<float>();
+	
+	if (WheelValue > 0)
+	{
+		while(SpringArmComponent->TargetArmLength > 50)
+		{
+			SpringArmComponent->TargetArmLength -= 0.5f;
+		}
+	}
+	
+	if (WheelValue < 0)
+	{
+		while (SpringArmComponent->TargetArmLength < 250)
+		{
+			SpringArmComponent->TargetArmLength += 0.5f;
+		}
+	}
+	
+	
 }

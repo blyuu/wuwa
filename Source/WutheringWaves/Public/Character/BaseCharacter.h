@@ -19,9 +19,6 @@ protected:
 public:	
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-	void Move(const FInputActionValue& value);
-	void Look(const FInputActionValue& value);
-
 protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -36,6 +33,11 @@ protected:
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	TObjectPtr<class UInputMappingContext> InputMappingContext;
 	
-	
 	bool IsRotate = false;
+	
+public:
+	
+	void Move(const FInputActionValue& value);
+	void Look(const FInputActionValue& value);
+	void MouseWheel(const FInputActionValue& value);
 };
