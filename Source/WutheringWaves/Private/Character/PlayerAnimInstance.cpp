@@ -23,6 +23,12 @@ void UPlayerAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
 	
+	if (IsValid(OwnerCharacter) == false || 
+	 IsValid(OwnerCharacterMovement) == false)
+	{
+		return;
+	}
+	
 	if (IsValid(OwnerCharacter) == true && 
 		IsValid(OwnerCharacterMovement) == true)
 	{
@@ -33,5 +39,7 @@ void UPlayerAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		bool bIsAccelerationNearlyZero = FMath::IsNearlyZero(GroundAcceleration);
 		bShouldMove = (KINDA_SMALL_NUMBER < GroundSpeed) && (bIsAccelerationNearlyZero == false);
 	}
+	
+	bIsFalling = OwnerCharacterMovement->IsFalling();
 	
 }
