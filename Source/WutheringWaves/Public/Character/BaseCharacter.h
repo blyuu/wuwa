@@ -35,10 +35,17 @@ protected:
 	
 	
 	bool IsRotate = false;
+	bool IsAttacking =false;
 	
 public:
 	
 	void Move(const FInputActionValue& value);
 	void Look(const FInputActionValue& value);
 	void MouseWheel(const FInputActionValue& value);
+	void LeftClick(const FInputActionValue& value);
+	
+	void PlayAnimation(UAnimMontage* AnimMontage);
+	
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<class UAnimMontage> BaseAttack;
 };

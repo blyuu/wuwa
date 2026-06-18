@@ -3,6 +3,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "Camera/CameraComponent.h"
 #include "Character/WuwaInputConfig.h"
+#include "Animation/AnimationAsset.h"
 #include "GameFramework/SpringArmComponent.h"
 
 #include "GameFramework/CharacterMovementComponent.h" 
@@ -57,7 +58,6 @@ void ABaseCharacter::BeginPlay()
 void ABaseCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 }
 
 void ABaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -70,7 +70,8 @@ void ABaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 		EnhancedInputComponent->BindAction(WuwaInputConfig->InputMove, ETriggerEvent::Triggered, this, &ABaseCharacter::Move);
 		EnhancedInputComponent->BindAction(WuwaInputConfig->InputMouseWheel, ETriggerEvent::Triggered, this, &ABaseCharacter::MouseWheel);
 		EnhancedInputComponent->BindAction(WuwaInputConfig->InputJump, ETriggerEvent::Started, this, &ABaseCharacter::Jump);
-		EnhancedInputComponent->BindAction(WuwaInputConfig->InputJump, ETriggerEvent::Started, this, &ABaseCharacter::StopJumping);
+		EnhancedInputComponent->BindAction(WuwaInputConfig->InputJump, ETriggerEvent::Completed, this, &ABaseCharacter::StopJumping);
+		EnhancedInputComponent->BindAction(WuwaInputConfig->InputLeftClick, ETriggerEvent::Started, this, &ABaseCharacter::LeftClick);
 		
 		
 	}
@@ -136,4 +137,18 @@ void ABaseCharacter::MouseWheel(const FInputActionValue& value)
 	}
 	
 	
+}
+
+void ABaseCharacter::LeftClick(const FInputActionValue& value)
+{
+	PlayAnimation(BaseAttack);
+	IsAttacking = true;
+}
+
+void ABaseCharacter::PlayAnimation(UAnimMontage* AnimMontage)
+{
+	if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+	{
+		AnimInstance->Montage_Play(AnimMontage);
+	}
 }
