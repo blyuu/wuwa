@@ -1,12 +1,15 @@
 #include "Character/BaseCharacter.h"
+#include "Abilities/GameplayAbility.h"
+#include "GameplayAbilitySpec.h"
+#include "AbilitySystemComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Character/WuwaInputConfig.h"
 #include "Animation/AnimationAsset.h"
 #include "GameFramework/SpringArmComponent.h"
 
-#include "GameFramework/CharacterMovementComponent.h" 
 
 ABaseCharacter::ABaseCharacter()
 {
@@ -19,11 +22,9 @@ ABaseCharacter::ABaseCharacter()
 	SpringArmComponent->TargetArmLength = 250.0f;
 	
 	CameraComponent->SetupAttachment(SpringArmComponent);
-    
 
 	SpringArmComponent->bUsePawnControlRotation = true; 
 	CameraComponent->bUsePawnControlRotation = false;
-    
 	
 	bUseControllerRotationYaw = false; 
 	bUseControllerRotationPitch = false;
@@ -32,6 +33,8 @@ ABaseCharacter::ABaseCharacter()
 
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f); 
+	
+	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 
 	InputMappingContext = nullptr;
 }
@@ -71,9 +74,61 @@ void ABaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 		EnhancedInputComponent->BindAction(WuwaInputConfig->InputMouseWheel, ETriggerEvent::Triggered, this, &ABaseCharacter::MouseWheel);
 		EnhancedInputComponent->BindAction(WuwaInputConfig->InputJump, ETriggerEvent::Started, this, &ABaseCharacter::Jump);
 		EnhancedInputComponent->BindAction(WuwaInputConfig->InputJump, ETriggerEvent::Completed, this, &ABaseCharacter::StopJumping);
-		EnhancedInputComponent->BindAction(WuwaInputConfig->InputLeftClick, ETriggerEvent::Started, this, &ABaseCharacter::LeftClick);
 		
 		
+		// Ability Skills과 관련된 키와 그걸 실행하는 함수 바인딩
+		if (WuwaInputConfig)
+		{
+			for (FWuwaInput Action : WuwaInputConfig->InputTagList)
+			{
+				EnhancedInputComponent->BindAction(Action.InputAction, ETriggerEvent::Completed, this, &ABaseCharacter::InputTagUseAbility, Action.InputTag);
+			}
+		}
+	}
+}
+
+UAbilitySystemComponent* ABaseCharacter::GetAbilitySystemComponent() const
+{
+	return AbilitySystemComponent;
+}
+
+void ABaseCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	AbilitySystemComponent->InitAbilityActorInfo(this, this);
+	
+	
+	//현재 캐릭터에게 Give Ability를 일괄적으로 제공하는 함수
+	GiveAbilites();
+}
+
+
+void ABaseCharacter::InputTagUseAbility(FGameplayTag InputTag)
+{
+	AbilitySystemComponent->TryActivateAbilitiesByTag(FGameplayTagContainer(InputTag));
+}
+
+void ABaseCharacter::GiveAbilites()
+{
+	if (Abilites.IsEmpty())
+	{
+		return;
+	}
+	
+	//BP에서 등록한 GameAbilities를 일괄적으로 해당 캐릭터에게 Give Ability
+	for (int i = 0; i<Abilites.Num();i++)
+	{
+		FGameplayAbilitySpec AbilitySpec(Abilites[i], 1, -1);
+		FGameplayAbilitySpecHandle Checker = AbilitySystemComponent->GiveAbility(AbilitySpec);
+		
+		if (Checker.IsValid())
+		{
+			UE_LOG(LogTemp, Log, TEXT("등록 성공!"));
+		}
+		else
+		{
+			UE_LOG(LogTemp, Log, TEXT("등록 실패!"));
+		}
 	}
 }
 
@@ -139,16 +194,3 @@ void ABaseCharacter::MouseWheel(const FInputActionValue& value)
 	
 }
 
-void ABaseCharacter::LeftClick(const FInputActionValue& value)
-{
-	PlayAnimation(BaseAttack);
-	IsAttacking = true;
-}
-
-void ABaseCharacter::PlayAnimation(UAnimMontage* AnimMontage)
-{
-	if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
-	{
-		AnimInstance->Montage_Play(AnimMontage);
-	}
-}

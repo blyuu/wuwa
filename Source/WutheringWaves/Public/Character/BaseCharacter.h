@@ -3,10 +3,14 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
+#include "AbilitySystemInterface.h"
 #include "BaseCharacter.generated.h"
 
+class UGameplayAbility;
+struct FGameplayTag;
+
 UCLASS()
-class WUTHERINGWAVES_API ABaseCharacter : public ACharacter
+class WUTHERINGWAVES_API ABaseCharacter : public ACharacter, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
@@ -18,8 +22,22 @@ protected:
 
 public:	
 	virtual void Tick(float DeltaTime) override;
+	
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	
+	//Virtual Function
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+	
+	
 protected:
+	
+	//GAS System Interface
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AbilitySystem")
+	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
+	
+	//Game Abilities List
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AbilitySystem")
+	TArray<TSubclassOf<UGameplayAbility>> Abilites;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TObjectPtr<class UCameraComponent> CameraComponent;
@@ -33,19 +51,25 @@ protected:
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	TObjectPtr<class UInputMappingContext> InputMappingContext;
 	
+	UFUNCTION()
+	void InputTagUseAbility(FGameplayTag InputTag);
 	
-	bool IsRotate = false;
-	bool IsAttacking =false;
+	void GiveAbilites();
+	
+	virtual void PossessedBy(AController* NewController) override;
+
 	
 public:
 	
 	void Move(const FInputActionValue& value);
 	void Look(const FInputActionValue& value);
 	void MouseWheel(const FInputActionValue& value);
-	void LeftClick(const FInputActionValue& value);
-	
-	void PlayAnimation(UAnimMontage* AnimMontage);
 	
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<class UAnimMontage> BaseAttack;
+	
+	//To Save BaseAttack Montages
+	UPROPERTY(EditAnywhere,BlueprintReadwrite)
+	TArray<TObjectPtr<UAnimMontage>> BaseAttacks;
+	
 };

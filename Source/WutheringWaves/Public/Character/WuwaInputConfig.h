@@ -2,10 +2,25 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "GameplayTagContainer.h"
 #include "WuwaInputConfig.generated.h"
 
 
 class UInputAction;
+struct FGameplayTag;
+
+USTRUCT(Blueprintable)
+struct FWuwaInput
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TObjectPtr<UInputAction> InputAction;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FGameplayTag InputTag;
+	
+};
 
 UCLASS()
 class WUTHERINGWAVES_API UWuwaInputConfig : public UDataAsset
@@ -26,6 +41,6 @@ public:
 	TObjectPtr<UInputAction> InputMouseWheel;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TObjectPtr<UInputAction> InputLeftClick;
+	TArray<FWuwaInput> InputTagList;
 	
 };
