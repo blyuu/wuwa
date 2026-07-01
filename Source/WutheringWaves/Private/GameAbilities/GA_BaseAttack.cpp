@@ -20,11 +20,27 @@ void UGA_BaseAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, co
 	
 	UE_LOG(LogTemp, Display, TEXT("Used BaseAttack"));
 	
+	//PlayMontage 부분 
+	UAbilityTask_PlayMontageAndWait* MontageTask = 
+		UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+			this, FName("BaseAttack1"),BaseCharacter->BaseAttack);	
 	
+	if (MontageTask)
+	{
+		MontageTask->OnCompleted.AddDynamic(this, &UGA_BaseAttack::EndMontage);
+		MontageTask->ReadyForActivation();
+	}
 }
 
 void UGA_BaseAttack::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility,
 	bool bWasCancelled)
 {
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+	
+	
+}
+
+void UGA_BaseAttack::EndMontage()
+{
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }

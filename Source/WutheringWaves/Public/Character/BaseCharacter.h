@@ -68,8 +68,7 @@ public:
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<class UAnimMontage> BaseAttack;
 	
-	//To Save BaseAttack Montages
-	UPROPERTY(EditAnywhere,BlueprintReadwrite)
-	TArray<TObjectPtr<UAnimMontage>> BaseAttacks;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AbilitySystem")
+	TObjectPtr<class UWuWa_AttributeSetBase> AttributeSet;
 	
 };

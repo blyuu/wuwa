@@ -8,6 +8,7 @@
 #include "Camera/CameraComponent.h"
 #include "Character/WuwaInputConfig.h"
 #include "Animation/AnimationAsset.h"
+#include "GameAbilities/WuWa_AttributeSetBase.h"
 #include "GameFramework/SpringArmComponent.h"
 
 
@@ -36,6 +37,8 @@ ABaseCharacter::ABaseCharacter()
 	
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 
+	AttributeSet = CreateDefaultSubobject<UWuWa_AttributeSetBase>(TEXT("AttributeSystem"));
+	
 	InputMappingContext = nullptr;
 }
 
