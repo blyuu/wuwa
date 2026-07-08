@@ -5,6 +5,7 @@
 #include "Animation/AnimationAsset.h"
 #include "Character/BaseCharacter.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "Character/WeaponClass.h"
 
 UGA_BaseAttack::UGA_BaseAttack()
 {

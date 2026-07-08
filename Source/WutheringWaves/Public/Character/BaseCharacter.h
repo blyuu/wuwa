@@ -71,4 +71,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AbilitySystem")
 	TObjectPtr<class UWuWa_AttributeSetBase> AttributeSet;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
+	TSubclassOf<class AWeaponClass> WeaponClass;
+	
 };

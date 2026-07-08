@@ -8,6 +8,7 @@
 #include "Camera/CameraComponent.h"
 #include "Character/WuwaInputConfig.h"
 #include "Animation/AnimationAsset.h"
+#include "Character/WeaponClass.h"
 #include "GameAbilities/WuWa_AttributeSetBase.h"
 #include "GameFramework/SpringArmComponent.h"
 
@@ -58,6 +59,8 @@ void ABaseCharacter::BeginPlay()
 			}
 		}
 	}
+	
+	
 }
 
 
