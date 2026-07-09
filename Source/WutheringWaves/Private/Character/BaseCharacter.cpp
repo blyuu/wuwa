@@ -126,25 +126,16 @@ void ABaseCharacter::InputTagUseAbility(FGameplayTag InputTag)
 
 void ABaseCharacter::GiveAbilites()
 {
-	if (Abilites.IsEmpty())
+	if (Abilities.IsEmpty())
 	{
 		return;
 	}
 	
 	//BP에서 등록한 GameAbilities를 일괄적으로 해당 캐릭터에게 Give Ability
-	for (int i = 0; i<Abilites.Num();i++)
+	for (int i = 0; i<Abilities.Num();i++)
 	{
-		FGameplayAbilitySpec AbilitySpec(Abilites[i], 1, -1);
+		FGameplayAbilitySpec AbilitySpec(Abilities[i], 1, -1);
 		FGameplayAbilitySpecHandle Checker = AbilitySystemComponent->GiveAbility(AbilitySpec);
-		
-		if (Checker.IsValid())
-		{
-			UE_LOG(LogTemp, Log, TEXT("등록 성공!"));
-		}
-		else
-		{
-			UE_LOG(LogTemp, Log, TEXT("등록 실패!"));
-		}
 	}
 }
 
