@@ -60,6 +60,16 @@ void ABaseCharacter::BeginPlay()
 		}
 	}
 	
+	if (DefaultWeaponClass)
+	{
+		CurrentWeapon = GetWorld()->SpawnActor<AWeaponClass>(DefaultWeaponClass);
+		CurrentWeapon->AttachToComponent(
+		GetMesh(),
+		FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+		TEXT("WeaponProp02"));
+		CurrentWeapon->HideWeapon();
+	}
+	
 	
 }
 

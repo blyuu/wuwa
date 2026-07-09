@@ -14,21 +14,29 @@ class WUTHERINGWAVES_API UWeaponDataAsset : public UDataAsset
 	
 public:
 	
-	//무기 식별자 ID 및 무기 자체 이름
+	//Weapon ID, Weapon Name (ID 및 이름)
 	UPROPERTY(EditDefaultsOnly)
 	FName WeaponID;
 	UPROPERTY(EditDefaultsOnly)
 	FText WeaponName;
 	
 	
-	//무기 종류 설정용 태그
+	//Weapon BaseAttack (기초 공격력)
+	UPROPERTY(EditDefaultsOnly)
+	int32 BaseAttack;
+	
+	//Weapon Default Stats (기초 옵션)
+	UPROPERTY(EditDefaultsOnly)
+	float SubStats;
+	
+	//Weapon Type Tags (무기 종류 설정용 태그)
 	UPROPERTY(EditDefaultsOnly,meta = (Categories = "Weapon.Type"))
 	FGameplayTag WeaponType;
 	
 	
-	//무기 메쉬 설
-	
-	
+	//Weapon Skeletal Mesh Settings (스켈레탈 메쉬 설정)
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<USkeletalMesh> SkeletalMesh;
 	
 	
 	

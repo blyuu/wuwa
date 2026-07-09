@@ -66,12 +66,19 @@ public:
 	void MouseWheel(const FInputActionValue& value);
 	
 	UPROPERTY(EditAnywhere)
-	TObjectPtr<class UAnimMontage> BaseAttack;
+	TObjectPtr<class UCharacterDataAsset> CharacterData;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AbilitySystem")
 	TObjectPtr<class UWuWa_AttributeSetBase> AttributeSet;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
-	TSubclassOf<class AWeaponClass> WeaponClass;
+	
+	//Weapon Class CDO
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<class AWeaponClass> DefaultWeaponClass;
+	
+	//Weapon to Use
+	UPROPERTY()
+	AWeaponClass* CurrentWeapon;
+	
 	
 };
