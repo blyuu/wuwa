@@ -1,5 +1,4 @@
 #include "GameAbilities/GA_BaseAttack.h"
-
 #include "AbilitySystemComponent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Animation/AnimationAsset.h"
@@ -24,29 +23,23 @@ void UGA_BaseAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, co
 	
 	UE_LOG(LogTemp, Display, TEXT("Used BaseAttack"));
 	
-	const FGameplayTag SkillTag  = GetAssetTags().First();	
+	FGameplayTag BaseAttackTag = GetAssetTags().First();
 	
-	const FSkillData* Skill = BaseCharacter->CharacterData->Skills.Find(SkillTag);
-	if (!Skill || !Skill->Montage)
+	if (!BaseCharacter->CharacterData)
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 	
-	UAbilityTask_PlayMontageAndWait* MontageTask =
-	 UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
-		 this, NAME_None, Skill->Montage);
-	// OnCompleted/OnBlendOut/OnInterrupted/OnCancelled → EndMontage 바인딩 (기존과 동일)
-	MontageTask->ReadyForActivation();
+	UAnimMontage* BaseAttackMontage = BaseCharacter->CharacterData->Skills[BaseAttackTag].Montage;
 	
-	if (MontageTask)
-	{
-		MontageTask->OnCompleted.AddDynamic(this, &UGA_BaseAttack::EndMontage);
-		MontageTask->OnBlendOut.AddDynamic(this, &UGA_BaseAttack::EndMontage);
-		MontageTask->OnInterrupted.AddDynamic(this, &UGA_BaseAttack::EndMontage);
-		MontageTask->OnCancelled.AddDynamic(this, &UGA_BaseAttack::EndMontage);
-		MontageTask->ReadyForActivation();
-	}
+	UAbilityTask_PlayMontageAndWait* PlayBaseAttackMontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this,NAME_None,BaseAttackMontage);
+	
+	PlayBaseAttackMontageTask->OnBlendOut.AddDynamic(this,&UGA_BaseAttack::EndMontage);
+	PlayBaseAttackMontageTask->OnCancelled.AddDynamic(this,&UGA_BaseAttack::EndMontage);
+	PlayBaseAttackMontageTask->OnCompleted.AddDynamic(this,&UGA_BaseAttack::EndMontage);
+	PlayBaseAttackMontageTask->OnInterrupted.AddDynamic(this,&UGA_BaseAttack::EndMontage);
+	PlayBaseAttackMontageTask->ReadyForActivation();
+	
 	
 }
 
