@@ -20,4 +20,20 @@ public:
 	
 	void EndMontage();
 	
+	virtual void InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
+	
+private:
+	int32 CurrentComboIndex = 0 ;
+	
+	bool bComboInputBuffered = false;
+	
+	TObjectPtr<UAnimMontage> CurrentMontage = nullptr;
+	
+	UFUNCTION()
+	void OnComboWindowOpen(FGameplayEventData Payload);
+	
+	UFUNCTION()
+	void OnHitEventRecieved(FGameplayEventData Payload);
+	
+	
 };
