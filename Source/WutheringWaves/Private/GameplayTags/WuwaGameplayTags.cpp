@@ -31,3 +31,9 @@ namespace AbilityTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Type_ResonanceSkill, "Ability.Type.ResonanceSkill", "공명 스킬");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Type_Liberation, "Ability.Type.Liberation", "공명 해방");
 }
+
+namespace EventTags
+{
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_BaseAttack_Hit, "Event.BaseAttack.Hit", "일반공격 피격 판정");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Combo_WindowOpen, "Event.Combo.WindowOpen", "일반 공격 콤보 이벤트");
+}
