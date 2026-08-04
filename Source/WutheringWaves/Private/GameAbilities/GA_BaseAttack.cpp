@@ -16,24 +16,52 @@ UGA_BaseAttack::UGA_BaseAttack()
 
 void UGA_BaseAttack::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
 {
-	bComboInputBuffered = true;
+	UE_LOG(LogTemp, Warning, TEXT("[Combo] InputPressed - window open: %s"), bWindowIsOpen ? TEXT("true") : TEXT("false"));
+
+	if (bWindowIsOpen)
+	{
+		bWindowIsOpen = false;
+		AdvanceCombo();
+	}
+	else
+	{
+		bComboInputBuffered = true;
+	}
+}
+
+void UGA_BaseAttack::AdvanceCombo()
+{
+	CurrentComboIndex++;
+
+	FName CurrentSection = FName(*FString::Printf(TEXT("Attack_%d"), CurrentComboIndex));
+	FName NextSection    = FName(*FString::Printf(TEXT("Attack_%d"), CurrentComboIndex + 1));
+
+	UE_LOG(LogTemp, Warning, TEXT("[Combo] %s -> %s"), *CurrentSection.ToString(), *NextSection.ToString());
+
+	UAnimInstance* AnimInstance = GetCurrentActorInfo()->GetAnimInstance();
+
+	if (CurrentMontage->GetSectionIndex(NextSection) != INDEX_NONE)
+	{
+		AnimInstance->Montage_JumpToSection(NextSection, CurrentMontage);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Combo] Section NOT found - no more combos"));
+	}
 }
 
 void UGA_BaseAttack::OnComboWindowOpen(FGameplayEventData Payload)
 {
-	if (!bComboInputBuffered) return;
-	
-	bComboInputBuffered = false;
-	
-	CurrentComboIndex++;
-	
-	FName NextSection = FName(*FString::Printf(TEXT("Attack_%d"),CurrentComboIndex+1));
-	
-	UAnimInstance* AnimInstance = GetCurrentActorInfo()->GetAnimInstance();
-	
-	if (CurrentMontage-> GetSectionIndex(NextSection) != INDEX_NONE)
+	UE_LOG(LogTemp, Warning, TEXT("[Combo] Window opened - buffered: %s"), bComboInputBuffered ? TEXT("true") : TEXT("false"));
+
+	if (bComboInputBuffered)
 	{
-		AnimInstance->Montage_JumpToSection(NextSection, CurrentMontage);
+		bComboInputBuffered = false;
+		AdvanceCombo();
+	}
+	else
+	{
+		bWindowIsOpen = true;
 	}
 }
 
@@ -76,7 +104,8 @@ void UGA_BaseAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, co
 	
 	CurrentComboIndex = 0;
 	bComboInputBuffered = false;
-	
+	bWindowIsOpen = false;
+
 	// 콤보 윈도우 이벤트 대기
 	UAbilityTask_WaitGameplayEvent* WaitCombo = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
 		this, EventTags::Event_Combo_WindowOpen);
@@ -102,11 +131,13 @@ void UGA_BaseAttack::EndAbility(const FGameplayAbilitySpecHandle Handle, const F
 	
 	CurrentComboIndex = 0;
 	bComboInputBuffered = false;
-	
+	bWindowIsOpen = false;
 }
 
 void UGA_BaseAttack::EndMontage()
 {
-	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-	
+	if (IsActive())
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+	}
 }

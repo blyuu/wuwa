@@ -121,7 +121,21 @@ void ABaseCharacter::PossessedBy(AController* NewController)
 
 void ABaseCharacter::InputTagUseAbility(FGameplayTag InputTag)
 {
-	AbilitySystemComponent->TryActivateAbilitiesByTag(FGameplayTagContainer(InputTag));
+	if (!AbilitySystemComponent->TryActivateAbilitiesByTag(FGameplayTagContainer(InputTag)))
+	{
+		for (FGameplayAbilitySpec& Spec : AbilitySystemComponent->GetActivatableAbilities())
+		{
+			if (!Spec.IsActive() || !Spec.Ability) continue;
+			if (!Spec.Ability->AbilityTags.HasTag(InputTag)) continue;
+
+			UGameplayAbility* Instance = Spec.GetPrimaryInstance();
+			if (Instance)
+			{
+				Instance->InputPressed(Spec.Handle, AbilitySystemComponent->AbilityActorInfo.Get(), Spec.ActivationInfo);
+			}
+			break;
+		}
+	}
 }
 
 void ABaseCharacter::GiveAbilites()

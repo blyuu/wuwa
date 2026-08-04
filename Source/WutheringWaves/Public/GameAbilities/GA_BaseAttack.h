@@ -18,6 +18,7 @@ public:
 	
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 	
+	UFUNCTION()
 	void EndMontage();
 	
 	virtual void InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
@@ -26,9 +27,13 @@ private:
 	int32 CurrentComboIndex = 0 ;
 	
 	bool bComboInputBuffered = false;
+
+	bool bWindowIsOpen = false;
 	
 	TObjectPtr<UAnimMontage> CurrentMontage = nullptr;
 	
+	void AdvanceCombo();
+
 	UFUNCTION()
 	void OnComboWindowOpen(FGameplayEventData Payload);
 	
