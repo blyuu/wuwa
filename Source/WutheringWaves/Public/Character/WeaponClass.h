@@ -11,10 +11,12 @@ class WUTHERINGWAVES_API AWeaponClass : public AActor
 {
 	GENERATED_BODY()
 	
-public:	
+public:
 	AWeaponClass();
-	
-	
+
+	static const FName SocketWeaponRoot;
+	static const FName SocketWeaponTip;
+
 	// Weapon Data Assets is here to set the Default settings of Weapon (Weapon Data Asset을 통해서 무기의 기본 데이터를 설정함)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TObjectPtr<UWeaponDataAsset> WeaponData;

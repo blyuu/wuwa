@@ -43,3 +43,9 @@ namespace EventTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_BaseAttack_Hit);			//일반 공격 피격 판정 이벤트
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combo_WindowOpen);			//일반 공격 콤보 이벤트
 }
+
+namespace RangeTags
+{
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Character_Range_Melee);				//근접 캐릭
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Character_Range_Ranged);             //원거리 캐릭
+}

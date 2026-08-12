@@ -26,7 +26,6 @@ public:
 	static FGameplayTag GetComboTargetEventTag();
 	
 protected:
-	TArray<FHitResult> GetHitResultFromSweepLocationTargetData(const FGameplayAbilityTargetDataHandle& TargetDataHandle, float BladeHalfThickness = 15.f, bool bDrawDebug = false, bool bIgnoreSelf = true) const;
 	
 private:
 	int32 CurrentComboIndex = 0 ;
@@ -41,12 +40,10 @@ private:
 
 	UFUNCTION()
 	void OnComboWindowOpen(FGameplayEventData Payload);
-	
+
 	UFUNCTION()
-	void OnHitEventRecieved(FGameplayEventData Payload);
-	
-	
-	UFUNCTION()
-	void DoDamage(FGameplayEventData Data);
-	
+	void OnHitEvent(FGameplayEventData Payload);
+
+	void PerformRangedTrace();
+
 };

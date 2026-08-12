@@ -2,6 +2,8 @@
 
 #include "Weapon/WeaponDataAsset.h"
 
+const FName AWeaponClass::SocketWeaponRoot = TEXT("WeaponRoot");
+const FName AWeaponClass::SocketWeaponTip  = TEXT("WeaponTip");
 
 AWeaponClass::AWeaponClass()
 {

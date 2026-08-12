@@ -37,3 +37,9 @@ namespace EventTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_BaseAttack_Hit, "Event.BaseAttack.Hit", "일반공격 피격 판정");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Combo_WindowOpen, "Event.Combo.WindowOpen", "일반 공격 콤보 이벤트");
 }
+
+namespace RangeTags
+{
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Character_Range_Melee, "Character.Range.Melee", "근접 캐릭터");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Character_Range_Ranged, "Character.Range.Ranged", "원거리 캐릭터");
+}

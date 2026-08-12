@@ -66,11 +66,6 @@ void UGA_BaseAttack::OnComboWindowOpen(FGameplayEventData Payload)
 	}
 }
 
-void UGA_BaseAttack::OnHitEventRecieved(FGameplayEventData Payload)
-{
-	UE_LOG(LogTemp, Display, TEXT("Hit! Combo %d"), CurrentComboIndex + 1);
-	DoDamage(Payload);
-}
 
 void UGA_BaseAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
@@ -117,9 +112,8 @@ void UGA_BaseAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, co
 	// 피격 판정 이벤트 대기
 	UAbilityTask_WaitGameplayEvent* WaitHit = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
 		this, EventTags::Event_BaseAttack_Hit);
-	WaitHit->EventReceived.AddDynamic(this, &UGA_BaseAttack::OnHitEventRecieved);
+	WaitHit->EventReceived.AddDynamic(this, &UGA_BaseAttack::OnHitEvent);
 	WaitHit->ReadyForActivation();
-	
 }
 
 void UGA_BaseAttack::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility,
@@ -145,70 +139,66 @@ void UGA_BaseAttack::EndMontage()
 }
 
 
+void UGA_BaseAttack::OnHitEvent(FGameplayEventData Payload)
+{
+	ABaseCharacter* BaseCharacter = Cast<ABaseCharacter>(GetCurrentActorInfo()->AvatarActor);
+	if (!BaseCharacter || !BaseCharacter->CharacterData) return;
+
+	if (BaseCharacter->CharacterData->RangeTag == RangeTags::Character_Range_Ranged)
+	{
+		PerformRangedTrace();
+	}
+	else
+	{
+		// 근접: WeaponAnimNotifyState에서 sweep 후 payload에 대상 담아 이벤트 발송
+		AActor* HitActor = const_cast<AActor*>(Payload.Target.Get());
+		if (HitActor)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[Melee] Hit confirmed: %s"), *HitActor->GetName());
+			// TODO: Apply damage via GAS
+		}
+	}
+}
+
+void UGA_BaseAttack::PerformRangedTrace()
+{
+	ABaseCharacter* BaseCharacter = Cast<ABaseCharacter>(GetCurrentActorInfo()->AvatarActor);
+
+	const APlayerController* PC = Cast<APlayerController>(BaseCharacter->GetController());
+	if (!PC)
+	{
+		return;
+	}
+
+	FVector CameraLocation;
+	FRotator CameraRotation;
+	PC->GetPlayerViewPoint(CameraLocation, CameraRotation);
+
+	const FVector TraceEnd = CameraLocation + CameraRotation.Vector() * 5000.f;
+
+	FHitResult HitResult;
+	TArray<AActor*> ActorsToIgnore = { BaseCharacter };
+
+	UKismetSystemLibrary::LineTraceSingle(
+		BaseCharacter,
+		CameraLocation,
+		TraceEnd,
+		UEngineTypes::ConvertToTraceType(ECC_Pawn),
+		false,
+		ActorsToIgnore,
+		EDrawDebugTrace::ForDuration,
+		HitResult,
+		true
+	);
+
+	if (HitResult.bBlockingHit)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Ranged] Hit: %s"), *HitResult.GetActor()->GetName());
+	}
+}
+
 FGameplayTag UGA_BaseAttack::GetComboTargetEventTag()
 {
 	return FGameplayTag::RequestGameplayTag("Event.BaseAttack.Hit");
 }
 
-void UGA_BaseAttack::DoDamage(FGameplayEventData Data)
-{
-	TArray<FHitResult> HitResults = GetHitResultFromSweepLocationTargetData(Data.TargetData, 15.f, true, true);
-
-	for (const FHitResult& Hit : HitResults)
-	{
-		if (Hit.GetActor())
-		{
-			UE_LOG(LogTemp, Display, TEXT("[Hit] Actor: %s | Bone: %s | Location: %s"),
-				*Hit.GetActor()->GetName(),
-				*Hit.BoneName.ToString(),
-				*Hit.Location.ToString());
-		}
-	}
-}
-
-TArray<FHitResult> UGA_BaseAttack::GetHitResultFromSweepLocationTargetData(const FGameplayAbilityTargetDataHandle& TargetDataHandle, float BladeHalfThickness, bool bDrawDebug, bool bIgnoreSelf) const
-{
-	TArray<FHitResult> OutResult;
-
-	AActor* AvatarActor = GetAvatarActorFromActorInfo();
-	if (!AvatarActor || TargetDataHandle.Data.Num() == 0) return OutResult;
-
-	// 첫 번째(루트)와 마지막(팁) LocationInfo로 전체 블레이드 구성
-	FVector BladeRoot = TargetDataHandle.Data[0]->GetOrigin().GetTranslation();
-	FVector BladeTip  = TargetDataHandle.Data.Last()->GetEndPoint();
-
-	float BladeLength = FVector::Dist(BladeRoot, BladeTip);
-	if (BladeLength < KINDA_SMALL_NUMBER) return OutResult;
-
-	FVector BladeDir    = (BladeTip - BladeRoot) / BladeLength;
-	FVector BladeCenter = (BladeRoot + BladeTip) * 0.5f;
-
-	// 박스 로컬 Z축을 블레이드 방향으로 정렬
-	FQuat BladeOrient = FQuat::FindBetweenVectors(FVector::UpVector, BladeDir);
-	FVector HalfSize(BladeHalfThickness, BladeHalfThickness, BladeLength * 0.5f);
-
-	// 휘두르는 방향(캐릭터 오른쪽)으로 sweep → 궤적이 생김
-	FVector SwingDir   = AvatarActor->GetActorRightVector();
-	FVector SweepStart = BladeCenter - SwingDir * BladeHalfThickness;
-	FVector SweepEnd   = BladeCenter + SwingDir * BladeHalfThickness;
-
-	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
-	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_Pawn));
-
-	TArray<AActor*> ActorsToIgnore;
-	if (bIgnoreSelf) ActorsToIgnore.Add(AvatarActor);
-
-	EDrawDebugTrace::Type DrawType = bDrawDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None;
-
-	TArray<FHitResult> Results;
-	UKismetSystemLibrary::BoxTraceMultiForObjects(
-		AvatarActor, SweepStart, SweepEnd,
-		HalfSize, BladeOrient.Rotator(),
-		ObjectTypes, false, ActorsToIgnore,
-		DrawType, Results, false,
-		FLinearColor::Red, FLinearColor::Green, 5.f
-	);
-
-	OutResult.Append(Results);
-	return OutResult;
-}

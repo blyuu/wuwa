@@ -35,4 +35,8 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, meta = (Categories = "Ability.Type"))
 	TMap<FGameplayTag, FSkillData> Skills;
+	
+	UPROPERTY(EditDefaultsOnly, meta = (Categories = "Character.Range"))
+	FGameplayTag RangeTag;
+	
 };
