@@ -23,6 +23,11 @@ public:
 	
 	virtual void InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
 	
+	static FGameplayTag GetComboTargetEventTag();
+	
+protected:
+	TArray<FHitResult> GetHitResultFromSweepLocationTargetData(const FGameplayAbilityTargetDataHandle& TargetDataHandle, float BladeHalfThickness = 15.f, bool bDrawDebug = false, bool bIgnoreSelf = true) const;
+	
 private:
 	int32 CurrentComboIndex = 0 ;
 	
@@ -40,5 +45,8 @@ private:
 	UFUNCTION()
 	void OnHitEventRecieved(FGameplayEventData Payload);
 	
+	
+	UFUNCTION()
+	void DoDamage(FGameplayEventData Data);
 	
 };
