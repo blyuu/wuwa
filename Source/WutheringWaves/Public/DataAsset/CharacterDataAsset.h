@@ -17,6 +17,9 @@ struct FSkillData
 	TObjectPtr<class UAnimMontage> Montage;
 	
 	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<class UGameplayEffect> DamageEffect;
+	
+	UPROPERTY(EditDefaultsOnly)
 	float DamageMultiplier = 1.f;
 	
 	UPROPERTY(EditDefaultsOnly)

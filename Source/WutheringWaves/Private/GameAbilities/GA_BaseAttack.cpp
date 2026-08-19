@@ -1,4 +1,6 @@
 #include "GameAbilities/GA_BaseAttack.h"
+
+#include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Animation/AnimationAsset.h"
@@ -155,7 +157,16 @@ void UGA_BaseAttack::OnHitEvent(FGameplayEventData Payload)
 		if (HitActor)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("[Melee] Hit confirmed: %s"), *HitActor->GetName());
-			// TODO: Apply damage via GAS
+			UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor);
+			
+			if (TargetASC && DamageEffectClass)
+			{
+				FGameplayEffectContextHandle Context = GetAbilitySystemComponentFromActorInfo()->MakeEffectContext();
+				
+				FGameplayEffectSpecHandle Spec = GetAbilitySystemComponentFromActorInfo()->MakeOutgoingSpec(DamageEffectClass, 1.f, Context);
+				
+				TargetASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+			}
 		}
 	}
 }

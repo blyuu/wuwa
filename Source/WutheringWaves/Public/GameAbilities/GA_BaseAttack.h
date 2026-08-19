@@ -25,6 +25,10 @@ public:
 	
 	static FGameplayTag GetComboTargetEventTag();
 	
+	UPROPERTY(EditDefaultsOnly, Category = "Damage")
+	TSubclassOf<UGameplayEffect> DamageEffectClass;
+	
+	
 protected:
 	
 private:

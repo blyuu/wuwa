@@ -3,6 +3,8 @@
 
 #include "GameAbilities/WuWa_AttributeSetBase.h"
 
+#include "GameplayEffectExtension.h"
+
 UWuWa_AttributeSetBase::UWuWa_AttributeSetBase()
 {
 	InitHp(100.f);
@@ -17,6 +19,21 @@ bool UWuWa_AttributeSetBase::PreGameplayEffectExecute(struct FGameplayEffectModC
 void UWuWa_AttributeSetBase::PostGameplayEffectExecute(const struct FGameplayEffectModCallbackData& Data)
 {
 	Super::PostGameplayEffectExecute(Data);
+	
+	if (Data.EvaluatedData.Attribute == GetDamageAttribute())
+	{
+		float DmgValue = GetDamage();
+		SetDamage(0.f);
+		
+		float OldHp = GetHp();
+		float NewHp = FMath::Max(OldHp - DmgValue, 0.f);
+		SetHp(NewHp);
+		
+		AActor* TargetActor = Data.Target.AbilityActorInfo->AvatarActor.Get();
+		UE_LOG(LogTemp, Warning, TEXT("[Damage] %s | HP : %.1f -> %.1f (-%0.1f)"), 
+			TargetActor? *TargetActor->GetName() : TEXT("Unknown"), OldHp, NewHp, DmgValue);
+		
+	}
 }
 
 void UWuWa_AttributeSetBase::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)

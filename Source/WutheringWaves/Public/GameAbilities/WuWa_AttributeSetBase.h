@@ -31,9 +31,20 @@ private:
 	UPROPERTY()
 	FGameplayAttributeData MaxHp;
 	
+	UPROPERTY()
+	FGameplayAttributeData Stamina;
+	
+	UPROPERTY()
+	FGameplayAttributeData MaxStamina;
+	
+	UPROPERTY()
+	FGameplayAttributeData Damage;
+	
 public:
 	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, Hp);
 	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, MaxHp);
+	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, Damage);
+	
 	
 	virtual bool PreGameplayEffectExecute(struct FGameplayEffectModCallbackData& Data) override;
 	
