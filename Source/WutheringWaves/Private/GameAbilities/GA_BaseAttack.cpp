@@ -159,6 +159,9 @@ void UGA_BaseAttack::OnHitEvent(FGameplayEventData Payload)
 			UE_LOG(LogTemp, Warning, TEXT("[Melee] Hit confirmed: %s"), *HitActor->GetName());
 			UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor);
 			
+			FGameplayTag BaseAttackTag = GetAssetTags().First();
+			TSubclassOf<UGameplayEffect> DamageEffectClass = BaseCharacter->CharacterData->Skills[BaseAttackTag].DamageEffect;
+			
 			if (TargetASC && DamageEffectClass)
 			{
 				FGameplayEffectContextHandle Context = GetAbilitySystemComponentFromActorInfo()->MakeEffectContext();
