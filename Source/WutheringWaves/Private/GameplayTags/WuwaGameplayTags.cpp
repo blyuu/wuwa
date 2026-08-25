@@ -43,3 +43,12 @@ namespace RangeTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Character_Range_Melee, "Character.Range.Melee", "근접 캐릭터");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Character_Range_Ranged, "Character.Range.Ranged", "원거리 캐릭터");
 }
+
+namespace EnemyTypeTags
+{
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Enemy_Type_Calamity, "Enemy.Type.Calamity", "해일급");							
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Enemy_Type_Common, "Enemy.Type.Common", "경파급");								
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Enemy_Type_Elite, "Enemy.Type.Elite", "거랑급");								
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Enemy_Type_Overload, "Enemy.Type.Overload", "노도급");
+	
+}

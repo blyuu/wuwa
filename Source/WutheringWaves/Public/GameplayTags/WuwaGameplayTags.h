@@ -49,3 +49,12 @@ namespace RangeTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Character_Range_Melee);				//근접 캐릭
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Character_Range_Ranged);             //원거리 캐릭
 }
+
+
+namespace EnemyTypeTags
+{
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_Type_Calamity);							//해일급 몬스터
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_Type_Common);								//경파급 몬스터
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_Type_Elite)								//거랑급 몬스터
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_Type_Overload)								//노도급 몬스터
+}
