@@ -9,7 +9,6 @@
 // Sets default values for this component's properties
 UTeamComponent::UTeamComponent()
 {
-	// 이 컴포넌트는 매 프레임 Tick 할 필요가 없음 (교체는 이벤트성 동작)
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
@@ -20,8 +19,7 @@ void UTeamComponent::InitializeTeam()
 	{
 		return;
 	}
-
-	// 이 컴포넌트는 PlayerController 위에 붙어있다고 가정
+	
 	APlayerController* PC = Cast<APlayerController>(GetOwner());
 	if (!PC)
 	{
@@ -30,7 +28,7 @@ void UTeamComponent::InitializeTeam()
 
 	SpawnedTeam.Empty();
 
-	// 로스터에 등록된 캐릭터 전원을 미리 스폰
+	// Spawn all the characters first
 	for (int32 i = 0; i < TeamRoster.Num(); ++i)
 	{
 		if (!TeamRoster[i])
@@ -41,7 +39,7 @@ void UTeamComponent::InitializeTeam()
 		FActorSpawnParameters Params;
 		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-		ABaseCharacter* NewChar = World->SpawnActor<ABaseCharacter>(
+		APlayableCharacter* NewChar = World->SpawnActor<APlayableCharacter>(
 			TeamRoster[i], SpawnLocation, FRotator::ZeroRotator, Params);
 
 		if (!NewChar)
@@ -51,7 +49,7 @@ void UTeamComponent::InitializeTeam()
 
 		SpawnedTeam.Add(NewChar);
 
-		// 일단 전원 재워둔다 (숨김 + 충돌/이동 Off)
+		
 		DeActivateCharacter(NewChar);
 	}
 
@@ -60,7 +58,7 @@ void UTeamComponent::InitializeTeam()
 		return;
 	}
 
-	// 0번 캐릭터만 활성화 + possess
+	// Index 0 Character is first Activated
 	ActiveIndex = 0;
 	ActivateCharacter(SpawnedTeam[0]);
 	PC->Possess(SpawnedTeam[0]);
@@ -80,8 +78,8 @@ void UTeamComponent::SwitchCharacter(int32 Index)
 		return;
 	}
 
-	ABaseCharacter* Outgoing = SpawnedTeam[ActiveIndex];
-	ABaseCharacter* Incoming = SpawnedTeam[Index];
+	APlayableCharacter* Outgoing = SpawnedTeam[ActiveIndex];
+	APlayableCharacter* Incoming = SpawnedTeam[Index];
 
 	if (!Incoming)
 	{
@@ -120,7 +118,7 @@ void UTeamComponent::SwitchCharacter(int32 Index)
 	 
 }
 
-void UTeamComponent::ActivateCharacter(ABaseCharacter* Char)
+void UTeamComponent::ActivateCharacter(APlayableCharacter* Char)
 {
 	if (!Char)
 	{
@@ -137,7 +135,7 @@ void UTeamComponent::ActivateCharacter(ABaseCharacter* Char)
 	}
 }
 
-void UTeamComponent::DeActivateCharacter(ABaseCharacter* Char)
+void UTeamComponent::DeActivateCharacter(APlayableCharacter* Char)
 {
 	if (!Char)
 	{

@@ -8,6 +8,7 @@
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "DataAsset/CharacterDataAsset.h"
+#include "Character/PlayableCharacter.h"
 #include "Character/WeaponClass.h"
 #include "Kismet/KismetSystemLibrary.h"
 
@@ -73,7 +74,7 @@ void UGA_BaseAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, co
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 	
-	ABaseCharacter* BaseCharacter = Cast<ABaseCharacter>(ActorInfo->AvatarActor);
+	APlayableCharacter* BaseCharacter = Cast<APlayableCharacter>(ActorInfo->AvatarActor);
 	
 	BaseCharacter->CurrentWeapon->ShowWeapon();
 	
@@ -87,9 +88,6 @@ void UGA_BaseAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, co
 	}
 	
 	
-	//변경 전 UAnimMontage* BaseAttackMontage = BaseCharacter->CharacterData->Skills[BaseAttackTag].Montage;
-	
-	//변경 후
 	CurrentMontage = BaseCharacter->CharacterData->Skills[BaseAttackTag].Montage;
 	UAnimMontage* BaseAttackMontage = CurrentMontage;
 	
@@ -105,13 +103,13 @@ void UGA_BaseAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, co
 	bComboInputBuffered = false;
 	bWindowIsOpen = false;
 
-	// 콤보 윈도우 이벤트 대기
+	// Combo Window, Wait for event
 	UAbilityTask_WaitGameplayEvent* WaitCombo = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
 		this, EventTags::Event_Combo_WindowOpen);
 	WaitCombo->EventReceived.AddDynamic(this, &UGA_BaseAttack::OnComboWindowOpen);
 	WaitCombo->ReadyForActivation();
 
-	// 피격 판정 이벤트 대기
+	// Take Damage Event
 	UAbilityTask_WaitGameplayEvent* WaitHit = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
 		this, EventTags::Event_BaseAttack_Hit);
 	WaitHit->EventReceived.AddDynamic(this, &UGA_BaseAttack::OnHitEvent);
@@ -123,7 +121,7 @@ void UGA_BaseAttack::EndAbility(const FGameplayAbilitySpecHandle Handle, const F
 {
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 	
-	ABaseCharacter* BaseCharacter = Cast<ABaseCharacter>(ActorInfo->AvatarActor);
+	APlayableCharacter* BaseCharacter = Cast<APlayableCharacter>(ActorInfo->AvatarActor);
 	
 	BaseCharacter->CurrentWeapon->HideWeapon();
 	
@@ -143,7 +141,7 @@ void UGA_BaseAttack::EndMontage()
 
 void UGA_BaseAttack::OnHitEvent(FGameplayEventData Payload)
 {
-	ABaseCharacter* BaseCharacter = Cast<ABaseCharacter>(GetCurrentActorInfo()->AvatarActor);
+	APlayableCharacter* BaseCharacter = Cast<APlayableCharacter>(GetCurrentActorInfo()->AvatarActor);
 	if (!BaseCharacter || !BaseCharacter->CharacterData) return;
 
 	if (BaseCharacter->CharacterData->RangeTag == RangeTags::Character_Range_Ranged)
@@ -152,7 +150,7 @@ void UGA_BaseAttack::OnHitEvent(FGameplayEventData Payload)
 	}
 	else
 	{
-		// 근접: WeaponAnimNotifyState에서 sweep 후 payload에 대상 담아 이벤트 발송
+		
 		AActor* HitActor = const_cast<AActor*>(Payload.Target.Get());
 		if (HitActor)
 		{
@@ -176,7 +174,7 @@ void UGA_BaseAttack::OnHitEvent(FGameplayEventData Payload)
 
 void UGA_BaseAttack::PerformRangedTrace()
 {
-	ABaseCharacter* BaseCharacter = Cast<ABaseCharacter>(GetCurrentActorInfo()->AvatarActor);
+	APlayableCharacter* BaseCharacter = Cast<APlayableCharacter>(GetCurrentActorInfo()->AvatarActor);
 
 	const APlayerController* PC = Cast<APlayerController>(BaseCharacter->GetController());
 	if (!PC)
