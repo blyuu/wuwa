@@ -46,20 +46,10 @@ ABaseCharacter::ABaseCharacter()
 void ABaseCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	//IMC Mapping
-	
-	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
-	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-		{
-			if (InputMappingContext)
-			{
-				Subsystem->AddMappingContext(InputMappingContext,0);
-			}
-		}
-	}
-	
+
+	// IMC는 possess 될 때(활성화될 때) 추가한다. → PossessedBy 참고
+	// (팀 캐릭터는 스폰 시점에 컨트롤러가 없으므로 여기서 추가하면 안 됨)
+
 	if (DefaultWeaponClass)
 	{
 		CurrentWeapon = GetWorld()->SpawnActor<AWeaponClass>(DefaultWeaponClass);
@@ -112,10 +102,52 @@ void ABaseCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 	AbilitySystemComponent->InitAbilityActorInfo(this, this);
-	
-	
-	//현재 캐릭터에게 Give Ability를 일괄적으로 제공하는 함수
+
+	//현재 캐릭터에게 Give Ability를 일괄적으로 제공하는 함수 (내부에서 1회만 실행되도록 가드)
 	GiveAbilites();
+
+	// 활성 캐릭터가 되었으니 입력 매핑을 추가
+	AddInputMapping();
+}
+
+void ABaseCharacter::UnPossessed()
+{
+	// 컨트롤러를 잃기 전에 입력 매핑 제거
+	RemoveInputMapping();
+
+	Super::UnPossessed();
+}
+
+void ABaseCharacter::AddInputMapping()
+{
+	if (!InputMappingContext)
+	{
+		return;
+	}
+
+	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+		{
+			Subsystem->AddMappingContext(InputMappingContext, 0);
+		}
+	}
+}
+
+void ABaseCharacter::RemoveInputMapping()
+{
+	if (!InputMappingContext)
+	{
+		return;
+	}
+
+	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+		{
+			Subsystem->RemoveMappingContext(InputMappingContext);
+		}
+	}
 }
 
 
@@ -140,11 +172,19 @@ void ABaseCharacter::InputTagUseAbility(FGameplayTag InputTag)
 
 void ABaseCharacter::GiveAbilites()
 {
+	// 교체 때마다 PossessedBy 가 불리므로, 중복 부여를 막는다
+	if (bAbilitiesGranted)
+	{
+		return;
+	}
+
 	if (Abilities.IsEmpty())
 	{
 		return;
 	}
-	
+
+	bAbilitiesGranted = true;
+
 	//BP에서 등록한 GameAbilities를 일괄적으로 해당 캐릭터에게 Give Ability
 	for (int i = 0; i<Abilities.Num();i++)
 	{

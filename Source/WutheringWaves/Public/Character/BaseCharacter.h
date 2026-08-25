@@ -23,6 +23,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void PossessedBy(AController* NewController) override;
+	virtual void UnPossessed() override;
 
 	//=====================================================================================
 	// Default Components 
@@ -64,6 +65,13 @@ protected:
 	void InputTagUseAbility(FGameplayTag InputTag);
 	
 	void GiveAbilites();
+
+	// 어빌리티는 캐릭터당 1회만 부여되어야 함 (교체 시 possess가 반복 호출되므로 중복 방지)
+	bool bAbilitiesGranted = false;
+
+	// IMC 추가/제거 헬퍼 (활성 캐릭터만 입력 매핑을 갖도록)
+	void AddInputMapping();
+	void RemoveInputMapping();
 
 
 public:
