@@ -42,6 +42,12 @@ protected:
 
 	// Ability Should be only Granted 1 time so to prevent that added  this
 	bool bAbilitiesGranted = false;
+	
+	
+	//Helper Function of HP and XP etc
+	void InitializeAttributes(float InMaxHp);
+	
+	bool bIsDead = false;
 
 public:
 	//=======================================================================================
@@ -50,7 +56,7 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<class AWeaponClass> DefaultWeaponClass;
 
-	
+	virtual void HandleDeath();
 	// Actual Weapon that the player held
 	UPROPERTY()
 	AWeaponClass* CurrentWeapon;

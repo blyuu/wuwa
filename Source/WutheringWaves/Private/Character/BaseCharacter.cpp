@@ -78,3 +78,33 @@ void ABaseCharacter::GiveAbilites()
 		FGameplayAbilitySpecHandle Checker = AbilitySystemComponent->GiveAbility(AbilitySpec);
 	}
 }
+
+void ABaseCharacter::InitializeAttributes(float InMaxHp)
+{
+	if (!AttributeSet)
+	{
+		return;
+	}
+	
+	AttributeSet->InitMaxHp(InMaxHp);
+	AttributeSet->InitHp(InMaxHp);
+}
+
+void ABaseCharacter::HandleDeath()
+{
+	if (bIsDead)
+	{
+		return;
+	}
+	
+	if (UCharacterMovementComponent* Move = GetCharacterMovement())
+	{
+		Move->StopMovementImmediately();
+		Move->DisableMovement();
+	}
+	
+	SetActorEnableCollision(false);
+	
+	UE_LOG(LogTemp,Warning, TEXT("%s Dead"), *GetName());
+	
+}

@@ -42,4 +42,12 @@ public:
 	UPROPERTY(EditDefaultsOnly, meta = (Categories = "Character.Range"))
 	FGameplayTag RangeTag;
 	
+	
+	// To give different hp per character -> Later will use functions to give that
+	UPROPERTY(EditDefaultsOnly)
+	float MaxHp = 100.f;
+	
+	UPROPERTY(EditDefaultsOnly)
+	int32 Level = 1;
+	
 };

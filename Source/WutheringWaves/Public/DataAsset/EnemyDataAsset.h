@@ -41,4 +41,8 @@ public:
 	UPROPERTY(EditDefaultsOnly, meta = (Categories = "Enemy.Type"))
 	FGameplayTag EnemyType;
 	
+	
+	UPROPERTY(EditDefaultsOnly)
+	float MaxHp = 100.f;
+	
 };

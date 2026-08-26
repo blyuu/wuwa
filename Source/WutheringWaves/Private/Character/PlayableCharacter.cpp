@@ -11,6 +11,7 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Character/WuwaInputConfig.h"
+#include "DataAsset/CharacterDataAsset.h"
 
 APlayableCharacter::APlayableCharacter()
 {
@@ -58,6 +59,11 @@ void APlayableCharacter::PossessedBy(AController* NewController)
 {
 	// Character Base : InitAbilityActorInfo + GiveAbilites 
 	Super::PossessedBy(NewController);
+	
+	if (CharacterData)
+	{
+		InitializeAttributes(CharacterData->MaxHp);
+	}
 	
 	AddInputMapping();
 }

@@ -4,6 +4,7 @@
 #include "GameAbilities/WuWa_AttributeSetBase.h"
 
 #include "GameplayEffectExtension.h"
+#include "Character/BaseCharacter.h"
 
 UWuWa_AttributeSetBase::UWuWa_AttributeSetBase()
 {
@@ -28,6 +29,16 @@ void UWuWa_AttributeSetBase::PostGameplayEffectExecute(const struct FGameplayEff
 		float OldHp = GetHp();
 		float NewHp = FMath::Max(OldHp - DmgValue, 0.f);
 		SetHp(NewHp);
+		
+		if (NewHp <= 0.f)
+		{
+			AActor* TargetActor = Data.Target.AbilityActorInfo->AvatarActor.Get();
+			
+			if (ABaseCharacter* Character = Cast<ABaseCharacter>(TargetActor))
+			{
+				Character->HandleDeath();
+			}
+		}
 		
 		AActor* TargetActor = Data.Target.AbilityActorInfo->AvatarActor.Get();
 		UE_LOG(LogTemp, Warning, TEXT("[Damage] %s | HP : %.1f -> %.1f (-%0.1f)"), 
