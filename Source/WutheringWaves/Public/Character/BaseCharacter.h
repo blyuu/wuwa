@@ -56,6 +56,11 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<class AWeaponClass> DefaultWeaponClass;
 
+	// 무기를 항상 보이게 둘지 (적처럼 발도 연출이 없는 캐릭터용).
+	// false면 평소엔 숨기고 공격 어빌리티에서만 뽑는 기존 동작.
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
+	bool bAlwaysShowWeapon = false;
+
 	virtual void HandleDeath();
 	// Actual Weapon that the player held
 	UPROPERTY()

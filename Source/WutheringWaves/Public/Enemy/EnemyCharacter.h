@@ -27,8 +27,19 @@ public:
 	
 	void BeginPlay() override;
 
-	// BehaviorTree의 공격 Task(BTTask_EnemyAttack)가 호출한다. GA_EnemyAttack을 태그로 발동.
+	// BehaviorTree의 공격 Task(BTTask_EnemyAttack)가 호출한다.
+	// 현재 페이즈에 맞는 스킬을 골라 CurrentSkillTag에 세팅하고 GA_EnemyAttack을 발동.
 	void PerformAttack();
+
+	// 현재 HP 비율로 페이즈를 계산한다 (1부터 시작). EnemyDataAsset->PhaseHpRatios 기준.
+	int32 GetCurrentPhase() const;
+
+	// PerformAttack이 고른 공격 타입 태그. GA_EnemyAttack이 이 태그로 데이터 에셋에서 GE/배율을 찾는다.
+	FGameplayTag CurrentSkillTag;
+
+	// PerformAttack이 그 태그의 몽타주 목록에서 랜덤으로 뽑은 몽타주. GA_EnemyAttack이 이걸 재생한다.
+	UPROPERTY()
+	TObjectPtr<class UAnimMontage> CurrentMontage;
 
 protected:
 	virtual void HandleDeath() override;

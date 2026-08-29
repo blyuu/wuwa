@@ -41,6 +41,7 @@ namespace AbilityTags
 namespace EventTags
 {  
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_BaseAttack_Hit);			//일반 공격 피격 판정 이벤트
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_EnemyAttack_Hit);			//적 공격 피격 판정 이벤트
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combo_WindowOpen);			//일반 공격 콤보 이벤트
 }
 
@@ -61,6 +62,8 @@ namespace EnemyTypeTags
 
 namespace EnemyAbilityTags
 {
-	//Enemy Skills
+	//Enemy Skills (Skills 맵의 키 = 공격 패턴)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_Ability_Attack);							//적 기본 공격
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_Ability_Heavy);							//강공격 패턴
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_Ability_Charge);							//돌진 패턴
 }

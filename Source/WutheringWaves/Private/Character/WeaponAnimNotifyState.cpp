@@ -66,7 +66,9 @@ void UWeaponAnimNotifyState::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimS
 		EventData.Instigator = Character;
 		EventData.Target     = HitActor;
 
-		ASC->HandleGameplayEvent(EventTags::Event_BaseAttack_Hit, &EventData);
+		// 몽타주에서 지정한 태그로 쏜다. 안 정했으면 플레이어용 기본 태그로 폴백.
+		const FGameplayTag EventToSend = HitEventTag.IsValid() ? HitEventTag : EventTags::Event_BaseAttack_Hit;
+		ASC->HandleGameplayEvent(EventToSend, &EventData);
 	}
 
 	PrevSocketRoot = CurrSocketRoot;

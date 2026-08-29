@@ -35,6 +35,7 @@ namespace AbilityTags
 namespace EventTags
 {
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_BaseAttack_Hit, "Event.BaseAttack.Hit", "일반공격 피격 판정");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_EnemyAttack_Hit, "Event.EnemyAttack.Hit", "적 공격 피격 판정");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Combo_WindowOpen, "Event.Combo.WindowOpen", "일반 공격 콤보 이벤트");
 }
 
@@ -56,4 +57,6 @@ namespace EnemyTypeTags
 namespace EnemyAbilityTags
 {
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Enemy_Ability_Attack, "Enemy.Ability.Attack", "적 기본 공격");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Enemy_Ability_Heavy, "Enemy.Ability.Heavy", "강공격 패턴");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Enemy_Ability_Charge, "Enemy.Ability.Charge", "돌진 패턴");
 }

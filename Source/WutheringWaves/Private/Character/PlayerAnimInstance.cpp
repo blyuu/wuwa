@@ -22,8 +22,19 @@ void UPlayerAnimInstance::NativeInitializeAnimation()
 void UPlayerAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
-	
-	if (IsValid(OwnerCharacter) == false || 
+
+	// 런타임 스폰된 적은 init 시점에 소유 폰이 아직 없어 캐시에 실패할 수 있다.
+	// 그런 경우 여기서 매 프레임 다시 잡아준다 (한 번 잡히면 유지됨).
+	if (IsValid(OwnerCharacter) == false)
+	{
+		OwnerCharacter = Cast<ABaseCharacter>(TryGetPawnOwner());
+		if (IsValid(OwnerCharacter) == true)
+		{
+			OwnerCharacterMovement = OwnerCharacter->GetCharacterMovement();
+		}
+	}
+
+	if (IsValid(OwnerCharacter) == false ||
 	 IsValid(OwnerCharacterMovement) == false)
 	{
 		return;

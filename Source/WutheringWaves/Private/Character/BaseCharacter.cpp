@@ -33,7 +33,16 @@ void ABaseCharacter::BeginPlay()
 		GetMesh(),
 		FAttachmentTransformRules::SnapToTargetNotIncludingScale,
 		TEXT("WeaponProp02"));
-		CurrentWeapon->HideWeapon();
+
+		// 항상 보이는 캐릭터(적)는 뽑아두고, 아니면 기존대로 숨겨서 공격 때만 뽑는다.
+		if (bAlwaysShowWeapon)
+		{
+			CurrentWeapon->ShowWeapon();
+		}
+		else
+		{
+			CurrentWeapon->HideWeapon();
+		}
 	}
 }
 
