@@ -58,3 +58,9 @@ namespace EnemyTypeTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_Type_Elite)								//거랑급 몬스터
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_Type_Overload)								//노도급 몬스터
 }
+
+namespace EnemyAbilityTags
+{
+	//Enemy Skills
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_Ability_Attack);							//적 기본 공격
+}

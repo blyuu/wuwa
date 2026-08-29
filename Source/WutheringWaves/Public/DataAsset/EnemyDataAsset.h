@@ -40,9 +40,12 @@ public:
 	//Enemy Type Tag
 	UPROPERTY(EditDefaultsOnly, meta = (Categories = "Enemy.Type"))
 	FGameplayTag EnemyType;
-	
-	
+
+	//Enemy Skills keyed by their ability tag (Enemy.Ability.*)
+	UPROPERTY(EditDefaultsOnly, meta = (Categories = "Enemy.Ability"))
+	TMap<FGameplayTag, FEnemySkillData> Skills;
+
 	UPROPERTY(EditDefaultsOnly)
 	float MaxHp = 100.f;
-	
+
 };

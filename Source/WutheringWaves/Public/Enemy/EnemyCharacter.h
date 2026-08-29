@@ -22,8 +22,14 @@ public:
 	
 	
 	void BeginPlay() override;
-	
-	
+
+
 protected:
 	virtual void HandleDeath() override;
+
+	// 임시 확인용: N초마다 GA_EnemyAttack을 발동시켜 동작을 눈으로 검증한다.
+	// 이후 AIController/BehaviorTree로 교체할 예정.
+	void PerformAttack();
+
+	FTimerHandle AttackTimerHandle;
 };

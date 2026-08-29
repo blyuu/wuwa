@@ -46,9 +46,14 @@ namespace RangeTags
 
 namespace EnemyTypeTags
 {
-	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Enemy_Type_Calamity, "Enemy.Type.Calamity", "해일급");							
-	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Enemy_Type_Common, "Enemy.Type.Common", "경파급");								
-	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Enemy_Type_Elite, "Enemy.Type.Elite", "거랑급");								
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Enemy_Type_Calamity, "Enemy.Type.Calamity", "해일급");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Enemy_Type_Common, "Enemy.Type.Common", "경파급");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Enemy_Type_Elite, "Enemy.Type.Elite", "거랑급");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Enemy_Type_Overload, "Enemy.Type.Overload", "노도급");
-	
+
+}
+
+namespace EnemyAbilityTags
+{
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Enemy_Ability_Attack, "Enemy.Ability.Attack", "적 기본 공격");
 }
