@@ -5,11 +5,15 @@
 
 #include "AbilitySystemComponent.h"
 #include "DataAsset/EnemyDataAsset.h"
+#include "Enemy/WuwaEnemyController.h"
 #include "GameplayTags/WuwaGameplayTags.h"
-#include "TimerManager.h"
 
 AEnemyCharacter::AEnemyCharacter()
 {
+	// possess 배관을 C++에 박아 BP 세팅 실수를 원천 차단한다.
+	// (지난번 "부여가 안 됨"이 possess 미발생 때문이었던 걸 방지)
+	AIControllerClass = AWuwaEnemyController::StaticClass();
+	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 }
 
 void AEnemyCharacter::BeginPlay()
@@ -29,10 +33,6 @@ void AEnemyCharacter::BeginPlay()
 	// 적은 AIController possess에 의존하지 않고 여기서 직접 어빌리티를 부여한다.
 	// (bAbilitiesGranted 가드가 있어 이후 PossessedBy가 겹쳐도 중복 부여되지 않는다)
 	GiveAbilites();
-
-	// 임시 확인용: 3초마다 공격을 발동한다. AI 붙일 때 제거 예정.
-	GetWorldTimerManager().SetTimer(
-		AttackTimerHandle, this, &AEnemyCharacter::PerformAttack, 3.f, true);
 }
 
 void AEnemyCharacter::PerformAttack()
