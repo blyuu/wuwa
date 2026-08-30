@@ -20,12 +20,12 @@ public:
 	virtual void NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float FrameDeltaTime) override;
 	virtual void NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation) override;
 
-	// 무기 블레이드 두께 (trace radius)
+	// weapon blade thickness (trace radius)
 	UPROPERTY(EditAnywhere, Category = "Trace")
 	float TraceRadius = 10.f;
 
-	// 히트 시 쏠 게임플레이 이벤트 태그. 비워두면 Event.BaseAttack.Hit(플레이어용)을 쓴다.
-	// 적 몽타주에서는 Event.EnemyAttack.Hit으로 지정한다.
+	// gameplay event tag to fire on hit if left empty it uses Event.BaseAttack.Hit (player)
+	// on enemy montages set this to Event.EnemyAttack.Hit
 	UPROPERTY(EditAnywhere, Category = "Trace", meta = (Categories = "Event"))
 	FGameplayTag HitEventTag;
 
@@ -33,6 +33,6 @@ private:
 	FVector PrevSocketRoot = FVector::ZeroVector;
 	FVector PrevSocketTip  = FVector::ZeroVector;
 
-	// 한 스윙에서 같은 대상에 중복 히트 방지
+	// prevents hitting the same target twice in one swing
 	TSet<TWeakObjectPtr<AActor>> HitActors;
 };

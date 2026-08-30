@@ -34,7 +34,7 @@ void ABaseCharacter::BeginPlay()
 		FAttachmentTransformRules::SnapToTargetNotIncludingScale,
 		TEXT("WeaponProp02"));
 
-		// 항상 보이는 캐릭터(적)는 뽑아두고, 아니면 기존대로 숨겨서 공격 때만 뽑는다.
+		// always visible characters (enemies) keep it drawn, otherwise hide it and draw only on attack
 		if (bAlwaysShowWeapon)
 		{
 			CurrentWeapon->ShowWeapon();

@@ -33,7 +33,7 @@ void APlayableCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-	// Null Exception (크래시 방지용으로 추가해봄)
+	// Null Exception (added to prevent a crash)
 	if (!WuwaInputConfig)
 	{
 		return;

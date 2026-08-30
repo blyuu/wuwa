@@ -12,10 +12,14 @@ USTRUCT(BlueprintType)
 struct FSkillData
 {
 	GENERATED_BODY()
-	
+
+	// HUD icon for this ability shown on the skill bar
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<class UTexture2D> Icon;
+
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<class UAnimMontage> Montage;
-	
+
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<class UGameplayEffect> DamageEffect;
 	

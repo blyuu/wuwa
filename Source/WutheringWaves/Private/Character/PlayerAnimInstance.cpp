@@ -23,8 +23,8 @@ void UPlayerAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
 
-	// 런타임 스폰된 적은 init 시점에 소유 폰이 아직 없어 캐시에 실패할 수 있다.
-	// 그런 경우 여기서 매 프레임 다시 잡아준다 (한 번 잡히면 유지됨).
+	// a runtime spawned enemy may have no owner pawn yet at init so caching can fail
+	// in that case re-acquire it here every frame (once it's grabbed it stays)
 	if (IsValid(OwnerCharacter) == false)
 	{
 		OwnerCharacter = Cast<ABaseCharacter>(TryGetPawnOwner());

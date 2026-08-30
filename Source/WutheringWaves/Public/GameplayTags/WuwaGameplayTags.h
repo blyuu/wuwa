@@ -8,62 +8,62 @@
 namespace WeaponTags
 {
 	//Weapon Type
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Weapon_Type_Sword);		//직검
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Weapon_Type_Pistol);		//권총
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Weapon_Type_Rectifier)	//증폭기
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Weapon_Type_Gauntlet)	//권갑
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Weapon_Type_Broadblade)	//대검
-	
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Weapon_Type_Sword);		//Sword
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Weapon_Type_Pistol);		//Pistol
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Weapon_Type_Rectifier)	//Rectifier
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Weapon_Type_Gauntlet)	//Gauntlet
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Weapon_Type_Broadblade)	//Broadblade
+
 }
 
 namespace ElementTags
 {
 	//Character Attribute
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Character_Element_Fusion);		//융용
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Character_Element_Glacio);		//응결
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Character_Element_Aero);			//기류
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Character_Element_Electro);		//전도
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Character_Element_Spectro);		//회절
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Character_Element_Havoc);		//인멸
-	
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Character_Element_Fusion);		//Fusion
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Character_Element_Glacio);		//Glacio
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Character_Element_Aero);			//Aero
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Character_Element_Electro);		//Electro
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Character_Element_Spectro);		//Spectro
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Character_Element_Havoc);		//Havoc
+
 }
 
 
 namespace AbilityTags
 {
 	//Character Skills
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Type_BaseAttack);			//일반 공격
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Type_ResonanceSkill);		//공명 스킬
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Type_Liberation);		//공명 해방
-	
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Type_BaseAttack);			//Normal attack
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Type_ResonanceSkill);		//Resonance skill
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Type_Liberation);		//Resonance liberation
+
 }
 
 namespace EventTags
-{  
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_BaseAttack_Hit);			//일반 공격 피격 판정 이벤트
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_EnemyAttack_Hit);			//적 공격 피격 판정 이벤트
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combo_WindowOpen);			//일반 공격 콤보 이벤트
+{
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_BaseAttack_Hit);			//Normal attack hit event
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_EnemyAttack_Hit);			//Enemy attack hit event
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combo_WindowOpen);			//Normal attack combo event
 }
 
 namespace RangeTags
 {
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Character_Range_Melee);				//근접 캐릭
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Character_Range_Ranged);             //원거리 캐릭
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Character_Range_Melee);				//Melee character
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Character_Range_Ranged);             //Ranged character
 }
 
 
 namespace EnemyTypeTags
 {
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_Type_Calamity);							//해일급 몬스터
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_Type_Common);								//경파급 몬스터
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_Type_Elite)								//거랑급 몬스터
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_Type_Overload)								//노도급 몬스터
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_Type_Calamity);							//Calamity class monster
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_Type_Common);								//Common class monster
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_Type_Elite)								//Elite class monster
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_Type_Overload)								//Overload class monster
 }
 
 namespace EnemyAbilityTags
 {
-	//Enemy Skills (Skills 맵의 키 = 공격 패턴)
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_Ability_Attack);							//적 기본 공격
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_Ability_Heavy);							//강공격 패턴
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_Ability_Charge);							//돌진 패턴
+	//Enemy Skills (Skills map key = attack pattern)
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_Ability_Attack);							//Enemy basic attack
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_Ability_Heavy);							//Heavy attack pattern
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_Ability_Charge);							//Charge pattern
 }

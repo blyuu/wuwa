@@ -24,7 +24,7 @@ public:
 	void EndMontage();
 
 private:
-	// 적은 콤보/입력이 없으므로 플레이어 GA_BaseAttack에서 콤보 로직을 걷어낸 단순 버전이다.
+	// enemy has no combo/input so this is a stripped down version of the player's GA_BaseAttack without combo logic
 	TObjectPtr<UAnimMontage> CurrentMontage = nullptr;
 
 	UFUNCTION()

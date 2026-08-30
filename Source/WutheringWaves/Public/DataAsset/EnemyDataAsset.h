@@ -12,8 +12,8 @@ struct FEnemySkillData
 {
 	GENERATED_BODY()
 
-	// 이 공격 타입(태그)의 몽타주 변형들. PerformAttack이 여기서 랜덤으로 하나 재생한다.
-	// 같은 공격이라도 모션 여러 개 넣어두면 매번 다르게 나온다.
+	// montage variations for this attack type (tag) PerformAttack plays one at random from here
+	// even for the same attack putting several motions makes it vary each time
 	UPROPERTY(EditDefaultsOnly)
 	TArray<TObjectPtr<class UAnimMontage>> Montages;
 
@@ -26,7 +26,7 @@ struct FEnemySkillData
 	UPROPERTY(EditDefaultsOnly)
 	float Cooldown = 0.f;
 
-	// 이 스킬을 쓸 수 있는 최소 페이즈. 1이면 처음부터, 2면 2페이즈부터 사용 가능.
+	// min phase this skill can be used 1 = from start 2 = usable from phase 2
 	UPROPERTY(EditDefaultsOnly)
 	int32 MinPhase = 1;
 
@@ -47,22 +47,22 @@ public:
 	UPROPERTY(EditDefaultsOnly, meta = (Categories = "Enemy.Type"))
 	FGameplayTag EnemyType;
 
-	// 공격 타입(태그)별 스킬. 태그 하나당 몽타주 여러 개를 Montages에 넣는다.
-	// key = 공격 타입(Enemy.Ability.*), value = 그 타입의 GE/배율/몽타주 목록.
+	// skills per attack type (tag) put multiple montages under one tag in Montages
+	// key = attack type (Enemy.Ability.*) value = that type's GE/multiplier/montage list
 	UPROPERTY(EditDefaultsOnly, meta = (Categories = "Enemy.Ability"))
 	TMap<FGameplayTag, FEnemySkillData> Skills;
 
-	// 페이즈 전환 HP 비율. 내림차순으로 넣는다.
-	// 예: [0.5]      -> 1페이즈(HP>50%), 2페이즈(HP<=50%)
-	//     [0.7, 0.4] -> 1페이즈(>70%), 2페이즈(40~70%), 3페이즈(<=40%)
-	// 비우면 항상 1페이즈.
+	// phase transition HP ratios put them in descending order
+	// ex [0.5]      -> phase1 (HP>50%), phase2 (HP<=50%)
+	//    [0.7, 0.4] -> phase1 (>70%), phase2 (40~70%), phase3 (<=40%)
+	// leave empty for always phase1
 	UPROPERTY(EditDefaultsOnly)
 	TArray<float> PhaseHpRatios;
 
 	UPROPERTY(EditDefaultsOnly)
 	float MaxHp = 100.f;
 
-	// 적 이동 속도 (CharacterMovement의 MaxWalkSpeed로 들어감). 플레이어 기본이 600이라, 적은 보통 이보다 낮게.
+	// enemy move speed (goes into CharacterMovement MaxWalkSpeed) player default is 600 so enemy usually lower
 	UPROPERTY(EditDefaultsOnly)
 	float MoveSpeed = 300.f;
 

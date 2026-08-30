@@ -27,7 +27,7 @@ EBTNodeResult::Type UBTTask_EnemyAttack::ExecuteTask(UBehaviorTreeComponent& Own
 
 	Enemy->PerformAttack();
 
-	// 발동 명령을 보냈으니 Task 자체는 즉시 성공 처리한다.
-	// (몽타주가 끝날 때까지 기다리는 건 다음 단계에서 Wait 노드나 전용 Task로 처리)
+	// we sent the activate command so the Task itself succeeds right away
+	// (waiting until the montage ends is handled later by a Wait node or a dedicated Task)
 	return EBTNodeResult::Succeeded;
 }

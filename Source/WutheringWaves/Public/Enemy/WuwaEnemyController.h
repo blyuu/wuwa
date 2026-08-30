@@ -15,6 +15,6 @@ class WUTHERINGWAVES_API AWuwaEnemyController : public AAIController
 	GENERATED_BODY()
 
 public:
-	// possess한 적이 들고 있는 Behavior Tree를 실행한다.
+	// runs the Behavior Tree held by the possessed enemy
 	virtual void OnPossess(APawn* InPawn) override;
 };

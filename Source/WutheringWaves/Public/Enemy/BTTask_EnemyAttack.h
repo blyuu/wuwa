@@ -7,8 +7,8 @@
 #include "BTTask_EnemyAttack.generated.h"
 
 /**
- * BehaviorTree에서 적의 공격(GA_EnemyAttack)을 발동시키는 Task.
- * 실제 발동 로직은 AEnemyCharacter::PerformAttack에 있고, 이 Task는 그걸 호출만 한다.
+ * Task that fires the enemy attack (GA_EnemyAttack) from the BehaviorTree
+ * the actual activation logic lives in AEnemyCharacter::PerformAttack this Task just calls it
  */
 UCLASS()
 class WUTHERINGWAVES_API UBTTask_EnemyAttack : public UBTTaskNode

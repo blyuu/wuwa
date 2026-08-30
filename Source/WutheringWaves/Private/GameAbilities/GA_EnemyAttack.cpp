@@ -27,7 +27,7 @@ void UGA_EnemyAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, c
 		return;
 	}
 
-	// PerformAttack이 태그 목록에서 뽑아 세팅한 몽타주를 그대로 재생한다.
+	// just play the montage PerformAttack picked from the tag list and set
 	if (!Enemy->CurrentMontage)
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
@@ -43,8 +43,8 @@ void UGA_EnemyAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, c
 	PlayAttackMontageTask->OnInterrupted.AddDynamic(this, &UGA_EnemyAttack::EndMontage);
 	PlayAttackMontageTask->ReadyForActivation();
 
-	// 적 몽타주의 무기 노티파이(WeaponAnimNotifyState)가 쏘는 적 전용 히트 이벤트를 기다린다.
-	// 노티파이 쪽 HitEventTag를 Event.EnemyAttack.Hit으로 맞춰야 여기로 들어온다.
+	// wait for the enemy only hit event fired by the weapon notify (WeaponAnimNotifyState) on the enemy montage
+	// the notify's HitEventTag must be set to Event.EnemyAttack.Hit for it to arrive here
 	UAbilityTask_WaitGameplayEvent* WaitHit = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
 		this, EventTags::Event_EnemyAttack_Hit);
 	WaitHit->EventReceived.AddDynamic(this, &UGA_EnemyAttack::OnHitEvent);
@@ -56,7 +56,7 @@ void UGA_EnemyAttack::OnHitEvent(FGameplayEventData Payload)
 	AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(GetCurrentActorInfo()->AvatarActor);
 	if (!Enemy || !Enemy->EnemyDataAsset) return;
 
-	// PerformAttack이 고른 공격 타입 태그로 GE/배율을 찾는다.
+	// look up GE/multiplier by the attack type tag PerformAttack picked
 	const FEnemySkillData* SkillData = Enemy->EnemyDataAsset->Skills.Find(Enemy->CurrentSkillTag);
 	if (!SkillData || !SkillData->DamageEffect) return;
 
@@ -71,8 +71,8 @@ void UGA_EnemyAttack::OnHitEvent(FGameplayEventData Payload)
 
 	FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
 
-	// DamageMultiplier를 스펙 레벨로 넘긴다. GE의 데미지 크기가 레벨에 비례하도록 설정돼 있으면
-	// 몬스터마다 데이터 에셋에서 배율만 바꿔 공격력을 조절할 수 있다.
+	// pass DamageMultiplier as the spec level if the GE's damage scales with level
+	// each monster can tune its attack power just by changing the multiplier in the data asset
 	FGameplayEffectSpecHandle Spec = SourceASC->MakeOutgoingSpec(SkillData->DamageEffect, SkillData->DamageMultiplier, Context);
 	if (Spec.IsValid())
 	{

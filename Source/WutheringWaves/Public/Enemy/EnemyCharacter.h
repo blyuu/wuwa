@@ -20,24 +20,24 @@ public:
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<class UEnemyDataAsset> EnemyDataAsset;
 
-	// 이 적이 실행할 Behavior Tree. 컨트롤러(WuwaEnemyController)가 possess 시 읽어서 돌린다.
+	// Behavior Tree this enemy runs the controller (WuwaEnemyController) reads it on possess and runs it
 	UPROPERTY(EditAnywhere, Category = "AI")
 	TObjectPtr<class UBehaviorTree> BehaviorTree;
 	
 	
 	void BeginPlay() override;
 
-	// BehaviorTree의 공격 Task(BTTask_EnemyAttack)가 호출한다.
-	// 현재 페이즈에 맞는 스킬을 골라 CurrentSkillTag에 세팅하고 GA_EnemyAttack을 발동.
+	// called by the attack Task in the BehaviorTree (BTTask_EnemyAttack)
+	// picks a skill for the current phase sets CurrentSkillTag and fires GA_EnemyAttack
 	void PerformAttack();
 
-	// 현재 HP 비율로 페이즈를 계산한다 (1부터 시작). EnemyDataAsset->PhaseHpRatios 기준.
+	// works out the phase from current HP ratio (starts at 1) based on EnemyDataAsset->PhaseHpRatios
 	int32 GetCurrentPhase() const;
 
-	// PerformAttack이 고른 공격 타입 태그. GA_EnemyAttack이 이 태그로 데이터 에셋에서 GE/배율을 찾는다.
+	// attack type tag PerformAttack picked GA_EnemyAttack uses this tag to look up GE/multiplier in the data asset
 	FGameplayTag CurrentSkillTag;
 
-	// PerformAttack이 그 태그의 몽타주 목록에서 랜덤으로 뽑은 몽타주. GA_EnemyAttack이 이걸 재생한다.
+	// montage PerformAttack picked at random from that tag's montage list GA_EnemyAttack plays this
 	UPROPERTY()
 	TObjectPtr<class UAnimMontage> CurrentMontage;
 

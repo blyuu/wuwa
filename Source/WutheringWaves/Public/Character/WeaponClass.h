@@ -17,15 +17,15 @@ public:
 	static const FName SocketWeaponRoot;
 	static const FName SocketWeaponTip;
 
-	// Weapon Data Assets is here to set the Default settings of Weapon (Weapon Data Asset을 통해서 무기의 기본 데이터를 설정함)
+	// Weapon Data Assets is here to set the Default settings of Weapon
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TObjectPtr<UWeaponDataAsset> WeaponData;
 	
-	// Weapon Collider  (무기 콜라이더)
+	// Weapon Collider
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TObjectPtr<class UBoxComponent> Collider;
 	
-	//Skeletal Mesh Component of the Weapon (스켈레탈 메쉬 컴포넌트 설정)
+	//Skeletal Mesh Component of the Weapon
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TObjectPtr<class USkeletalMeshComponent> SkeletalMeshComponent;
 	
