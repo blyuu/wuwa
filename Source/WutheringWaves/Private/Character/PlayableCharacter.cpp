@@ -68,6 +68,11 @@ void APlayableCharacter::PossessedBy(AController* NewController)
 	AddInputMapping();
 }
 
+int32 APlayableCharacter::GetCharacterLevel() const
+{
+	return CharacterData ? CharacterData->Level : 1;
+}
+
 void APlayableCharacter::UnPossessed()
 {
 	RemoveInputMapping();

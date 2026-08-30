@@ -10,6 +10,10 @@ UWuWa_AttributeSetBase::UWuWa_AttributeSetBase()
 {
 	InitHp(100.f);
 	InitMaxHp(100.f);
+
+	// Resonance energy starts empty and builds up during combat
+	InitResonanceEnergy(0.f);
+	InitMaxResonanceEnergy(100.f);
 }
 
 bool UWuWa_AttributeSetBase::PreGameplayEffectExecute(struct FGameplayEffectModCallbackData& Data)
@@ -50,6 +54,16 @@ void UWuWa_AttributeSetBase::PostGameplayEffectExecute(const struct FGameplayEff
 void UWuWa_AttributeSetBase::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
 {
 	Super::PreAttributeChange(Attribute, NewValue);
+
+	// Keep the bar-backing values inside their valid range so the HUD never draws past full/empty
+	if (Attribute == GetHpAttribute())
+	{
+		NewValue = FMath::Clamp(NewValue, 0.f, GetMaxHp());
+	}
+	else if (Attribute == GetResonanceEnergyAttribute())
+	{
+		NewValue = FMath::Clamp(NewValue, 0.f, GetMaxResonanceEnergy());
+	}
 }
 
 void UWuWa_AttributeSetBase::PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue)

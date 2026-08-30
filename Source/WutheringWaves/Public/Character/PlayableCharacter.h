@@ -53,8 +53,16 @@ public:
 	void MouseWheel(const FInputActionValue& value);
 
 	//=======================================================================================
-	//  Character Data like Element,AnimMontage etc 
+	//  Character Data like Element,AnimMontage etc
 	//=======================================================================================
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<class UCharacterDataAsset> CharacterData;
+
+	// Static level pulled from the data asset (no leveling system) - used by the HUD.
+	UFUNCTION(BlueprintPure, Category = "Character")
+	int32 GetCharacterLevel() const;
+
+	// The character's data asset (element, skills + their icons, etc.) - used by the HUD.
+	UFUNCTION(BlueprintPure, Category = "Character")
+	UCharacterDataAsset* GetCharacterData() const { return CharacterData; }
 };

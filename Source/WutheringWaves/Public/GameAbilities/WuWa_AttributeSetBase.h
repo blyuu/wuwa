@@ -39,11 +39,20 @@ private:
 	
 	UPROPERTY()
 	FGameplayAttributeData Damage;
-	
+
+	// Concerto / resonance energy that fills up and powers the resonance skill (shown on the HUD)
+	UPROPERTY()
+	FGameplayAttributeData ResonanceEnergy;
+
+	UPROPERTY()
+	FGameplayAttributeData MaxResonanceEnergy;
+
 public:
 	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, Hp);
 	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, MaxHp);
 	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, Damage);
+	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, ResonanceEnergy);
+	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, MaxResonanceEnergy);
 	
 	
 	virtual bool PreGameplayEffectExecute(struct FGameplayEffectModCallbackData& Data) override;

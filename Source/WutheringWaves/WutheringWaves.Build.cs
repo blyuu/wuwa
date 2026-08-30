@@ -10,7 +10,7 @@ public class WutheringWaves : ModuleRules
 	
 		PublicDependencyModuleNames.AddRange(new string[]
 		{
-			"Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "MotionWarping", "GameplayAbilities", "GameplayTags", "GameplayTasks", "AIModule", "NavigationSystem"
+			"Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "MotionWarping", "GameplayAbilities", "GameplayTags", "GameplayTasks", "AIModule", "NavigationSystem", "UMG"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });

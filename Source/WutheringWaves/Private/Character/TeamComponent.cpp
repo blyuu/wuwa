@@ -5,6 +5,8 @@
 
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/GameModeBase.h"
+#include "UI/WuwaHUD.h"
 
 // Sets default values for this component's properties
 UTeamComponent::UTeamComponent()
@@ -28,6 +30,19 @@ void UTeamComponent::InitializeTeam()
 
 	SpawnedTeam.Empty();
 
+	// Spawn at the level's PlayerStart so moving it in the editor actually works.
+	// Falls back to the fixed SpawnLocation if the level has no PlayerStart.
+	FVector SpawnLoc = SpawnLocation;
+	FRotator SpawnRot = FRotator::ZeroRotator;
+	if (AGameModeBase* GameMode = World->GetAuthGameMode())
+	{
+		if (AActor* StartSpot = GameMode->FindPlayerStart(PC))
+		{
+			SpawnLoc = StartSpot->GetActorLocation();
+			SpawnRot = StartSpot->GetActorRotation();
+		}
+	}
+
 	// Spawn all the characters first
 	for (int32 i = 0; i < TeamRoster.Num(); ++i)
 	{
@@ -40,7 +55,7 @@ void UTeamComponent::InitializeTeam()
 		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 		APlayableCharacter* NewChar = World->SpawnActor<APlayableCharacter>(
-			TeamRoster[i], SpawnLocation, FRotator::ZeroRotator, Params);
+			TeamRoster[i], SpawnLoc, SpawnRot, Params);
 
 		if (!NewChar)
 		{
@@ -62,6 +77,12 @@ void UTeamComponent::InitializeTeam()
 	ActiveIndex = 0;
 	ActivateCharacter(SpawnedTeam[0]);
 	PC->Possess(SpawnedTeam[0]);
+
+	// Point the HUD at the starting character (no-op if the HUD isn't up yet - it seeds itself in BeginPlay)
+	if (AWuwaHUD* HUD = Cast<AWuwaHUD>(PC->GetHUD()))
+	{
+		HUD->OnPlayerCharacterChanged(SpawnedTeam[0]);
+	}
 }
 
 void UTeamComponent::SwitchCharacter(int32 Index)
@@ -115,7 +136,11 @@ void UTeamComponent::SwitchCharacter(int32 Index)
 
 	ActiveIndex = Index;
 
-	 
+	// Rebind the HUD to the newly active character's ASC / level
+	if (AWuwaHUD* HUD = Cast<AWuwaHUD>(PC->GetHUD()))
+	{
+		HUD->OnPlayerCharacterChanged(Incoming);
+	}
 }
 
 void UTeamComponent::ActivateCharacter(APlayableCharacter* Char)
