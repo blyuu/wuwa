@@ -24,6 +24,11 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Trace")
 	float TraceRadius = 10.f;
 
+	// enemies are bigger, so their swings use a fatter trace. TraceRadius is multiplied by this
+	// only when the owner is an AEnemyCharacter; the player's trace is unaffected.
+	UPROPERTY(EditAnywhere, Category = "Trace")
+	float EnemyTraceRadiusMultiplier = 1.4f;
+
 	// gameplay event tag to fire on hit if left empty it uses Event.BaseAttack.Hit (player)
 	// on enemy montages set this to Event.EnemyAttack.Hit
 	UPROPERTY(EditAnywhere, Category = "Trace", meta = (Categories = "Event"))

@@ -35,7 +35,14 @@ namespace AbilityTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Type_BaseAttack);			//Normal attack
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Type_ResonanceSkill);		//Resonance skill
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Type_Liberation);		//Resonance liberation
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Type_Dodge);				//Dodge / dash
 
+}
+
+namespace StateTags
+{
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Invulnerable);				//i-frame during dodge (blocks damage GE)
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_State_Attacking);			//enemy is inside an attack danger window
 }
 
 namespace EventTags

@@ -16,10 +16,15 @@ struct FWuwaInput
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TObjectPtr<UInputAction> InputAction;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FGameplayTag InputTag;
-	
+
+	// Fire on press (Started) instead of on release (Completed).
+	// Turn ON for dodge so it reacts the instant you click; leave OFF to keep the old release-to-fire feel.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bTriggerOnPressed = false;
+
 };
 
 UCLASS()

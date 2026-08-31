@@ -30,6 +30,13 @@ namespace AbilityTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Type_BaseAttack, "Ability.Type.BaseAttack", "Normal attack");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Type_ResonanceSkill, "Ability.Type.ResonanceSkill", "Resonance skill");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Type_Liberation, "Ability.Type.Liberation", "Resonance liberation");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Type_Dodge, "Ability.Type.Dodge", "Dodge / dash");
+}
+
+namespace StateTags
+{
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Invulnerable, "State.Invulnerable", "Immune to damage (dodge i-frame)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Enemy_State_Attacking, "Enemy.State.Attacking", "Enemy is inside an attack danger window");
 }
 
 namespace EventTags

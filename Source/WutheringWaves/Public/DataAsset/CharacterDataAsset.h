@@ -28,9 +28,30 @@ struct FSkillData
 	
 	UPROPERTY(EditDefaultsOnly)
 	float Cooldown = 0.f;
-	
-	
+
+
 };
+
+// Dodge has one input but three montages picked by situation, so it gets its own
+// block instead of the Skills map (which is one-montage-per-tag and carries damage data).
+USTRUCT(BlueprintType)
+struct FDodgeData
+{
+	GENERATED_BODY()
+
+	// Played when an enemy is attacking nearby (perfect dodge).
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<class UAnimMontage> PerfectMontage;
+
+	// Played when a movement key is held: dash in the input direction.
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<class UAnimMontage> ForwardMontage;
+
+	// Played with no movement input: dash backward.
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<class UAnimMontage> BackMontage;
+};
+
 UCLASS()
 class WUTHERINGWAVES_API UCharacterDataAsset : public UDataAsset
 {
@@ -45,7 +66,11 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, meta = (Categories = "Character.Range"))
 	FGameplayTag RangeTag;
-	
+
+	// The three dodge montages for this character (perfect / forward / back).
+	UPROPERTY(EditDefaultsOnly, Category = "Dodge")
+	FDodgeData Dodge;
+
 	
 	// To give different hp per character -> Later will use functions to give that
 	UPROPERTY(EditDefaultsOnly)

@@ -50,7 +50,9 @@ void APlayableCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 		// Binding the GAS AbilitySkills
 		for (FWuwaInput Action : WuwaInputConfig->InputTagList)
 		{
-			EnhancedInputComponent->BindAction(Action.InputAction, ETriggerEvent::Completed, this, &APlayableCharacter::InputTagUseAbility, Action.InputTag);
+			// Dodge fires on press (Started) for a snappy feel; everything else keeps release-to-fire (Completed).
+			const ETriggerEvent TriggerEvent = Action.bTriggerOnPressed ? ETriggerEvent::Started : ETriggerEvent::Completed;
+			EnhancedInputComponent->BindAction(Action.InputAction, TriggerEvent, this, &APlayableCharacter::InputTagUseAbility, Action.InputTag);
 		}
 	}
 }
