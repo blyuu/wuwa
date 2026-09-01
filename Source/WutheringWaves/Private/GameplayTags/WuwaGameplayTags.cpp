@@ -31,6 +31,7 @@ namespace AbilityTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Type_ResonanceSkill, "Ability.Type.ResonanceSkill", "Resonance skill");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Type_Liberation, "Ability.Type.Liberation", "Resonance liberation");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Type_Dodge, "Ability.Type.Dodge", "Dodge / dash");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Type_Intro, "Ability.Type.Intro", "Charged-swap intro (flank appear)");
 }
 
 namespace StateTags

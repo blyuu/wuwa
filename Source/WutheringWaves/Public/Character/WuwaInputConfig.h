@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
 #include "GameplayTagContainer.h"
+#include "InputTriggers.h"
 #include "WuwaInputConfig.generated.h"
 
 
@@ -20,10 +21,10 @@ struct FWuwaInput
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FGameplayTag InputTag;
 
-	// Fire on press (Started) instead of on release (Completed).
-	// Turn ON for dodge so it reacts the instant you click; leave OFF to keep the old release-to-fire feel.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bTriggerOnPressed = false;
+	// Which trigger event fires the ability. Completed = on release (attacks),
+	// Triggered = when a Tap/Hold trigger fires (dodge on a Tap trigger), Started = on press.
+	UPROPERTY(EditAnywhere)
+	ETriggerEvent TriggerEvent = ETriggerEvent::Completed;
 
 };
 
@@ -44,7 +45,11 @@ public:
 	
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	TObjectPtr<UInputAction> InputMouseWheel;
-	
+
+	// Sprint (run): map to the same key as dodge with a HOLD trigger (tap = dodge, hold = run)
+	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	TObjectPtr<UInputAction> InputSprint;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FWuwaInput> InputTagList;
 	

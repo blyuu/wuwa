@@ -13,6 +13,7 @@
 #include "Character/WuwaInputConfig.h"
 #include "DataAsset/CharacterDataAsset.h"
 #include "GameAbilities/WuWa_AttributeSetBase.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 APlayableCharacter::APlayableCharacter()
 {
@@ -48,12 +49,19 @@ void APlayableCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 		EnhancedInputComponent->BindAction(WuwaInputConfig->InputJump, ETriggerEvent::Started, this, &APlayableCharacter::Jump);
 		EnhancedInputComponent->BindAction(WuwaInputConfig->InputJump, ETriggerEvent::Completed, this, &APlayableCharacter::StopJumping);
 
-		// Binding the GAS AbilitySkills
+		// Sprint: hold the dodge key (Hold trigger) to run, release to walk
+		if (WuwaInputConfig->InputSprint)
+		{
+			EnhancedInputComponent->BindAction(WuwaInputConfig->InputSprint, ETriggerEvent::Triggered, this, &APlayableCharacter::StartSprint);
+			EnhancedInputComponent->BindAction(WuwaInputConfig->InputSprint, ETriggerEvent::Completed, this, &APlayableCharacter::StopSprint);
+			EnhancedInputComponent->BindAction(WuwaInputConfig->InputSprint, ETriggerEvent::Canceled, this, &APlayableCharacter::StopSprint);
+		}
+
+		// Binding the GAS AbilitySkills - each entry picks its own trigger event
+		// (attacks = Completed, dodge = Triggered so a Tap trigger fires it on tap while Hold sprints)
 		for (FWuwaInput Action : WuwaInputConfig->InputTagList)
 		{
-			// Dodge fires on press (Started) for a snappy feel; everything else keeps release-to-fire (Completed).
-			const ETriggerEvent TriggerEvent = Action.bTriggerOnPressed ? ETriggerEvent::Started : ETriggerEvent::Completed;
-			EnhancedInputComponent->BindAction(Action.InputAction, TriggerEvent, this, &APlayableCharacter::InputTagUseAbility, Action.InputTag);
+			EnhancedInputComponent->BindAction(Action.InputAction, Action.TriggerEvent, this, &APlayableCharacter::InputTagUseAbility, Action.InputTag);
 		}
 	}
 }
@@ -72,6 +80,12 @@ void APlayableCharacter::PossessedBy(AController* NewController)
 		{
 			AttributeSet->InitMaxVariationEnergy(CharacterData->MaxVariationEnergy);
 			AttributeSet->InitVariationEnergy(0.f);
+		}
+
+		// start at walk speed (sprint switches to RunSpeed while the dodge key is held)
+		if (UCharacterMovementComponent* Move = GetCharacterMovement())
+		{
+			Move->MaxWalkSpeed = CharacterData->WalkSpeed;
 		}
 	}
 
@@ -177,6 +191,28 @@ void APlayableCharacter::Look(const FInputActionValue& value)
 	{
 		AddControllerYawInput(Inputval.X);
 		AddControllerPitchInput(Inputval.Y);
+	}
+}
+
+void APlayableCharacter::StartSprint()
+{
+	if (CharacterData)
+	{
+		if (UCharacterMovementComponent* Move = GetCharacterMovement())
+		{
+			Move->MaxWalkSpeed = CharacterData->RunSpeed;
+		}
+	}
+}
+
+void APlayableCharacter::StopSprint()
+{
+	if (CharacterData)
+	{
+		if (UCharacterMovementComponent* Move = GetCharacterMovement())
+		{
+			Move->MaxWalkSpeed = CharacterData->WalkSpeed;
+		}
 	}
 }
 

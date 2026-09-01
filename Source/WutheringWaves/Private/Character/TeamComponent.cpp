@@ -6,6 +6,13 @@
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/GameModeBase.h"
+#include "AbilitySystemComponent.h"
+#include "GameplayEffect.h"
+#include "GameAbilities/WuWa_AttributeSetBase.h"
+#include "GameplayTags/WuwaGameplayTags.h"
+#include "Enemy/EnemyCharacter.h"
+#include "Kismet/GameplayStatics.h"
+#include "TimerManager.h"
 #include "UI/WuwaHUD.h"
 
 // Sets default values for this component's properties
@@ -88,6 +95,12 @@ void UTeamComponent::InitializeTeam()
 void UTeamComponent::SwitchCharacter(int32 Index)
 {
 	
+	// ignore new switch requests while a charged swap's outro is still playing out
+	if (PendingSwapIndex != INDEX_NONE)
+	{
+		return;
+	}
+
 	if (!SpawnedTeam.IsValidIndex(Index) || Index == ActiveIndex)
 	{
 		return;
@@ -107,39 +120,90 @@ void UTeamComponent::SwitchCharacter(int32 Index)
 		return;
 	}
 
-	// Save the Camera Position so that the changed charac can use it
-	
+	// charged swap: outro (outgoing lingers ~1s and attacks) -> then swap + intro
+	if (IsVariationFull(Outgoing))
+	{
+		PerformChargedSwapEffect(Outgoing);   // nearest-enemy 5% fixed damage + consume the gauge
+
+		// outro: the outgoing character does a basic attack while it lingers
+		if (UAbilitySystemComponent* ASC = Outgoing->GetAbilitySystemComponent())
+		{
+			ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(AbilityTags::Ability_Type_BaseAttack));
+		}
+
+		// delay the real swap; FinishChargedSwap does the swap + the incoming's GA_Intro (flank appear)
+		PendingSwapIndex = Index;
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().SetTimer(ChargedSwapTimer, this, &UTeamComponent::FinishChargedSwap, ChargedSwapOutroTime, false);
+		}
+		return;
+	}
+
+	// normal instant swap
+	DoSwap(Index);
+}
+
+void UTeamComponent::DoSwap(int32 Index)
+{
+	if (!SpawnedTeam.IsValidIndex(Index))
+	{
+		return;
+	}
+
+	APlayerController* PC = Cast<APlayerController>(GetOwner());
+	if (!PC)
+	{
+		return;
+	}
+
+	APlayableCharacter* Outgoing = SpawnedTeam[ActiveIndex];
+	APlayableCharacter* Incoming = SpawnedTeam[Index];
+	if (!Incoming)
+	{
+		return;
+	}
+
+	// keep the camera facing across the swap
 	const FRotator SavedControlRotation = PC->GetControlRotation();
 
-	
 	if (Outgoing)
 	{
-		Incoming->SetActorLocationAndRotation(
-			Outgoing->GetActorLocation(),
-			Outgoing->GetActorRotation());
-
-	
-	}
-
-	//Change Character, Deactivate + activate
-	if (Outgoing)
-	{
+		Incoming->SetActorLocationAndRotation(Outgoing->GetActorLocation(), Outgoing->GetActorRotation());
 		DeActivateCharacter(Outgoing);
 	}
+
 	ActivateCharacter(Incoming);
-
-
 	PC->Possess(Incoming);
-
-
 	PC->SetControlRotation(SavedControlRotation);
-
 	ActiveIndex = Index;
 
-	// Rebind the HUD to the newly active character's ASC / level
+	// Rebind the HUD to the newly active character
 	if (AWuwaHUD* HUD = Cast<AWuwaHUD>(PC->GetHUD()))
 	{
 		HUD->OnPlayerCharacterChanged(Incoming);
+	}
+}
+
+void UTeamComponent::FinishChargedSwap()
+{
+	const int32 Index = PendingSwapIndex;
+	PendingSwapIndex = INDEX_NONE;
+
+	if (!SpawnedTeam.IsValidIndex(Index))
+	{
+		return;
+	}
+
+	DoSwap(Index);
+
+	// intro: the incoming character flanks the enemy + plays its intro (GA_Intro repositions it)
+	if (APlayableCharacter* Incoming = SpawnedTeam[Index])
+	{
+		if (UAbilitySystemComponent* ASC = Incoming->GetAbilitySystemComponent())
+		{
+			ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(AbilityTags::Ability_Type_Intro));
+		}
 	}
 }
 
@@ -176,4 +240,85 @@ void UTeamComponent::DeActivateCharacter(APlayableCharacter* Char)
 		Movement->StopMovementImmediately();
 		Movement->DisableMovement();
 	}
+}
+
+bool UTeamComponent::IsVariationFull(APlayableCharacter* Char) const
+{
+	if (!Char)
+	{
+		return false;
+	}
+
+	UAbilitySystemComponent* ASC = Char->GetAbilitySystemComponent();
+	if (!ASC)
+	{
+		return false;
+	}
+
+	const float V = ASC->GetNumericAttribute(UWuWa_AttributeSetBase::GetVariationEnergyAttribute());
+	const float Max = ASC->GetNumericAttribute(UWuWa_AttributeSetBase::GetMaxVariationEnergyAttribute());
+	return Max > 0.f && V >= Max - 0.01f;
+}
+
+void UTeamComponent::PerformChargedSwapEffect(APlayableCharacter* Instigator)
+{
+	if (!Instigator)
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* SourceASC = Instigator->GetAbilitySystemComponent();
+	if (!SourceASC)
+	{
+		return;
+	}
+
+	// nearest enemy takes MaxHp * percent as fixed damage (via the SetByCaller damage GE)
+	if (ChargedSwapDamageEffect)
+	{
+		if (AEnemyCharacter* Enemy = FindNearestEnemy(Instigator->GetActorLocation()))
+		{
+			if (UAbilitySystemComponent* TargetASC = Enemy->GetAbilitySystemComponent())
+			{
+				const float MaxHp = TargetASC->GetNumericAttribute(UWuWa_AttributeSetBase::GetMaxHpAttribute());
+				const float Damage = MaxHp * ChargedSwapDamagePercent;
+
+				FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
+				FGameplayEffectSpecHandle Spec = SourceASC->MakeOutgoingSpec(ChargedSwapDamageEffect, 1.f, Context);
+				if (Spec.IsValid())
+				{
+					Spec.Data->SetSetByCallerMagnitude(DataTags::Data_Damage, Damage);
+					TargetASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+				}
+			}
+		}
+	}
+
+	// consume the variation gauge (drives the donut back to empty + stops the blink)
+	SourceASC->ApplyModToAttribute(UWuWa_AttributeSetBase::GetVariationEnergyAttribute(), EGameplayModOp::Override, 0.f);
+}
+
+AEnemyCharacter* UTeamComponent::FindNearestEnemy(const FVector& From) const
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return nullptr;
+	}
+
+	TArray<AActor*> Enemies;
+	UGameplayStatics::GetAllActorsOfClass(World, AEnemyCharacter::StaticClass(), Enemies);
+
+	AEnemyCharacter* Best = nullptr;
+	float BestDistSq = TNumericLimits<float>::Max();
+	for (AActor* Actor : Enemies)
+	{
+		const float DistSq = FVector::DistSquared(From, Actor->GetActorLocation());
+		if (DistSq < BestDistSq)
+		{
+			BestDistSq = DistSq;
+			Best = Cast<AEnemyCharacter>(Actor);
+		}
+	}
+	return Best;
 }

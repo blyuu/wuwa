@@ -20,6 +20,18 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Team")
 	TArray<TSubclassOf<APlayableCharacter>> TeamRoster;
 
+	// SetByCaller (Data.Damage) GE used for the charged-swap 5% fixed damage
+	UPROPERTY(EditDefaultsOnly, Category = "Team|Charged Swap")
+	TSubclassOf<class UGameplayEffect> ChargedSwapDamageEffect;
+
+	// fraction of the target's MaxHp dealt by a charged swap (0.05 = 5%)
+	UPROPERTY(EditDefaultsOnly, Category = "Team|Charged Swap")
+	float ChargedSwapDamagePercent = 0.05f;
+
+	// how long the outgoing character stays and attacks (outro) before the charged swap actually happens
+	UPROPERTY(EditDefaultsOnly, Category = "Team|Charged Swap")
+	float ChargedSwapOutroTime = 1.0f;
+
 
 	//Spawn the Character first, something like object pooling
 	UPROPERTY(EditDefaultsOnly, Category= "Team")
@@ -48,5 +60,17 @@ private:
 	void ActivateCharacter(APlayableCharacter* Char);
 
 	void DeActivateCharacter(APlayableCharacter* Char);
+
+	// the actual character swap (deactivate outgoing, activate + possess incoming, update HUD)
+	void DoSwap(int32 Index);
+
+	// charged swap (variation gauge full)
+	bool IsVariationFull(APlayableCharacter* Char) const;
+	void PerformChargedSwapEffect(APlayableCharacter* Instigator);
+	void FinishChargedSwap();   // fired after the outro delay: swap + trigger the incoming's GA_Intro
+	class AEnemyCharacter* FindNearestEnemy(const FVector& From) const;
+
+	FTimerHandle ChargedSwapTimer;
+	int32 PendingSwapIndex = INDEX_NONE;
 
 };

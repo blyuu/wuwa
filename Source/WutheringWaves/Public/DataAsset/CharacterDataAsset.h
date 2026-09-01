@@ -83,6 +83,10 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<class UTexture2D> Portrait;
 
+	// played by GA_Intro when this character is swapped in via a charged swap (flank appear)
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<class UAnimMontage> IntroMontage;
+
 	// The three dodge montages for this character (perfect / forward / back).
 	UPROPERTY(EditDefaultsOnly, Category = "Dodge")
 	FDodgeData Dodge;
@@ -91,6 +95,13 @@ public:
 	// max 변주 게이지 (charged-swap circuit). The gauge fills to this on hits.
 	UPROPERTY(EditDefaultsOnly)
 	float MaxVariationEnergy = 100.f;
+
+	// movement speeds - hold the dodge key to run (UE default walk is ~600 for reference)
+	UPROPERTY(EditDefaultsOnly, Category = "Movement")
+	float WalkSpeed = 50.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Movement")
+	float RunSpeed = 100.f;
 
 	// To give different hp per character -> Later will use functions to give that
 	UPROPERTY(EditDefaultsOnly)

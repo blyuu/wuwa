@@ -36,6 +36,7 @@ namespace AbilityTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Type_ResonanceSkill);		//Resonance skill
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Type_Liberation);		//Resonance liberation
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Type_Dodge);				//Dodge / dash
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Type_Intro);				//Charged-swap intro (flank appear)
 
 }
 

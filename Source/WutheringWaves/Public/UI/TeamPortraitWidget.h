@@ -10,11 +10,12 @@ struct FOnAttributeChangeData;
 class APlayableCharacter;
 class UAbilitySystemComponent;
 class UImage;
+class UProgressBar;
 
 /**
- * Right-side team panel: three character portraits (active one drawn larger).
- * Also watches the active character's VariationEnergy so the portraits get a "charged" sparkle
- * when it fills (the donut gauge itself lives on the overlay widget, next to the health bar).
+ * Right-side team panel: three portraits, each with a white HP bar. The active character is marked by a
+ * ring image shown BEHIND its portrait (not by scaling). Also watches the active character's
+ * VariationEnergy so the inactive portraits blink when it fills.
  */
 UCLASS()
 class WUTHERINGWAVES_API UTeamPortraitWidget : public UUserWidget
@@ -22,16 +23,16 @@ class WUTHERINGWAVES_API UTeamPortraitWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	// Set the three portraits and which slot is active (active is scaled up).
+	// Set the three portraits + HP bars + which slot is active (active shows the ring behind it).
 	void SetTeam(const TArray<TObjectPtr<APlayableCharacter>>& Team, int32 ActiveIndex);
 
-	// Point at the active character's ASC (watches VariationEnergy to drive the portrait sparkle).
+	// Point at the active character's ASC (watches VariationEnergy to drive the portrait blink).
 	void SetAbilitySystemComponent(UAbilitySystemComponent* InASC);
 
 protected:
 	virtual void NativeDestruct() override;
 
-	// WBP must contain three Image widgets with these exact names.
+	// Portraits (required) - WBP must contain Image widgets with these exact names.
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UImage> Portrait0;
 
@@ -41,24 +42,56 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UImage> Portrait2;
 
-	// Scale applied to the active character's portrait.
-	UPROPERTY(EditAnywhere, Category = "Team Portrait")
-	float ActivePortraitScale = 1.3f;
+	// Per-character HP bars (style them white in the WBP). Optional.
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UProgressBar> HealthBar0;
 
-	// Implement in the WBP: turn the portrait "charged" sparkle on/off when variation becomes full/empty.
-	UFUNCTION(BlueprintImplementableEvent, Category = "Team Portrait")
-	void OnVariationReadyChanged(bool bReady);
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UProgressBar> HealthBar1;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UProgressBar> HealthBar2;
+
+	// Ring image shown BEHIND the active character's portrait. Optional.
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UImage> ActiveRing0;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UImage> ActiveRing1;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UImage> ActiveRing2;
 
 private:
+	// variation gauge -> portrait blink (donut fill itself lives on the overlay widget)
 	void HandleVariationChanged(const FOnAttributeChangeData& Data);
 	void PushVariation();
 	void UnbindFromCurrentASC();
+
+	// per-character HP bars
+	void RefreshHealthBars();
+	void HandleTeamHealthChanged(const FOnAttributeChangeData& Data);
+	void BindHealthDelegates(const TArray<TObjectPtr<APlayableCharacter>>& Team);
+	void UnbindHealthDelegates();
+
+	// blink the INACTIVE portraits while variation is full (timer-driven, no WBP animation)
+	void SetBlinking(bool bOn);
+	void ToggleBlink();
+	void SetPortraitsOpacity(float Opacity);
 
 	UPROPERTY()
 	TObjectPtr<UAbilitySystemComponent> BoundASC;
 
 	bool bVariationReady = false;
+	bool bBlinkDim = false;
+	int32 ActiveSlot = 0;   // the currently-controlled slot - excluded from the blink
+	FTimerHandle BlinkTimer;
 
 	FDelegateHandle EnergyChangedHandle;
 	FDelegateHandle MaxEnergyChangedHandle;
+
+	// health delegate bookkeeping (parallel arrays, one entry per team slot)
+	TArray<TWeakObjectPtr<UAbilitySystemComponent>> HealthASCs;
+	TArray<FDelegateHandle> HpHandles;
+	TArray<FDelegateHandle> MaxHpHandles;
 };

@@ -52,6 +52,10 @@ public:
 	void Look(const FInputActionValue& value);
 	void MouseWheel(const FInputActionValue& value);
 
+	// hold the dodge key to run (sprint), release to go back to walk speed
+	void StartSprint();
+	void StopSprint();
+
 	//=======================================================================================
 	//  Character Data like Element,AnimMontage etc
 	//=======================================================================================
