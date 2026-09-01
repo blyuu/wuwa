@@ -71,11 +71,12 @@ void UGA_EnemyAttack::OnHitEvent(FGameplayEventData Payload)
 
 	FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
 
-	// pass DamageMultiplier as the spec level if the GE's damage scales with level
-	// each monster can tune its attack power just by changing the multiplier in the data asset
-	FGameplayEffectSpecHandle Spec = SourceASC->MakeOutgoingSpec(SkillData->DamageEffect, SkillData->DamageMultiplier, Context);
+	// feed the flat damage value straight in via SetByCaller (Data.Damage) - the GE's Damage modifier
+	// reads this, so each attack tunes its power just by the Damage field in the data asset (no curve table)
+	FGameplayEffectSpecHandle Spec = SourceASC->MakeOutgoingSpec(SkillData->DamageEffect, 1.f, Context);
 	if (Spec.IsValid())
 	{
+		Spec.Data->SetSetByCallerMagnitude(DataTags::Data_Damage, SkillData->Damage);
 		TargetASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
 	}
 }

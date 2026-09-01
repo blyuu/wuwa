@@ -39,6 +39,10 @@ public:
 
 	void SwitchCharacter(int32 Index);
 
+	// exposed for the team portrait HUD
+	const TArray<TObjectPtr<APlayableCharacter>>& GetTeam() const { return SpawnedTeam; }
+	int32 GetActiveIndex() const { return ActiveIndex; }
+
 
 private:
 	void ActivateCharacter(APlayableCharacter* Char);

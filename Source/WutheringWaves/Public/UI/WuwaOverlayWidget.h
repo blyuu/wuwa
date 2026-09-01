@@ -10,6 +10,7 @@ struct FOnAttributeChangeData;
 class UAbilitySystemComponent;
 class UImage;
 class UCharacterDataAsset;
+class UMaterialInstanceDynamic;
 
 /**
  * Bottom-of-screen player status bar (HP / Level / Resonance energy).
@@ -61,6 +62,10 @@ private:
 	void PushHealth();
 	void PushResonanceEnergy();
 
+	// variation gauge (donut) next to the health bar
+	void HandleVariationChanged(const FOnAttributeChangeData& Data);
+	void PushVariation();
+
 	void UnbindFromCurrentASC();
 
 	// Bound by name to Image widgets in the WBP subclass. The WBP MUST contain three
@@ -74,12 +79,25 @@ private:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UImage> LiberationIcon;
 
+	// Variation gauge (도넛) next to the health bar - an Image using a radial-fill material. Optional.
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UImage> VariationGauge;
+
+	// Scalar parameter on the gauge material that holds the 0..1 fill.
+	UPROPERTY(EditAnywhere, Category = "HUD")
+	FName VariationPercentParam = TEXT("Percent");
+
 	// The ASC we're currently listening to.
 	UPROPERTY()
 	TObjectPtr<UAbilitySystemComponent> BoundASC;
+
+	UPROPERTY()
+	TObjectPtr<UMaterialInstanceDynamic> GaugeMID;
 
 	FDelegateHandle HpChangedHandle;
 	FDelegateHandle MaxHpChangedHandle;
 	FDelegateHandle EnergyChangedHandle;
 	FDelegateHandle MaxEnergyChangedHandle;
+	FDelegateHandle VariationEnergyChangedHandle;
+	FDelegateHandle MaxVariationEnergyChangedHandle;
 };

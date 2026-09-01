@@ -5,6 +5,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "Components/Image.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "GameAbilities/WuWa_AttributeSetBase.h"
 #include "DataAsset/CharacterDataAsset.h"
 #include "GameplayTags/WuwaGameplayTags.h"
@@ -61,9 +62,15 @@ void UWuwaOverlayWidget::SetAbilitySystemComponent(UAbilitySystemComponent* InAS
 	MaxEnergyChangedHandle = BoundASC->GetGameplayAttributeValueChangeDelegate(
 		UWuWa_AttributeSetBase::GetMaxResonanceEnergyAttribute()).AddUObject(this, &UWuwaOverlayWidget::HandleMaxResonanceEnergyChanged);
 
+	VariationEnergyChangedHandle = BoundASC->GetGameplayAttributeValueChangeDelegate(
+		UWuWa_AttributeSetBase::GetVariationEnergyAttribute()).AddUObject(this, &UWuwaOverlayWidget::HandleVariationChanged);
+	MaxVariationEnergyChangedHandle = BoundASC->GetGameplayAttributeValueChangeDelegate(
+		UWuWa_AttributeSetBase::GetMaxVariationEnergyAttribute()).AddUObject(this, &UWuwaOverlayWidget::HandleVariationChanged);
+
 	// Delegates only fire on *future* changes, so seed the UI with the current values now.
 	PushHealth();
 	PushResonanceEnergy();
+	PushVariation();
 }
 
 void UWuwaOverlayWidget::SetLevel(int32 NewLevel)
@@ -133,6 +140,32 @@ void UWuwaOverlayWidget::PushResonanceEnergy()
 	OnResonanceEnergyChanged(Energy, MaxEnergy);
 }
 
+void UWuwaOverlayWidget::HandleVariationChanged(const FOnAttributeChangeData& /*Data*/)
+{
+	PushVariation();
+}
+
+void UWuwaOverlayWidget::PushVariation()
+{
+	if (!BoundASC || !VariationGauge)
+	{
+		return;
+	}
+
+	const float Energy = BoundASC->GetNumericAttribute(UWuWa_AttributeSetBase::GetVariationEnergyAttribute());
+	const float MaxEnergy = BoundASC->GetNumericAttribute(UWuWa_AttributeSetBase::GetMaxVariationEnergyAttribute());
+	const float Percent = MaxEnergy > 0.f ? Energy / MaxEnergy : 0.f;
+
+	if (!GaugeMID)
+	{
+		GaugeMID = VariationGauge->GetDynamicMaterial(); // makes a MID from the image's material
+	}
+	if (GaugeMID)
+	{
+		GaugeMID->SetScalarParameterValue(VariationPercentParam, Percent);
+	}
+}
+
 void UWuwaOverlayWidget::UnbindFromCurrentASC()
 {
 	if (BoundASC)
@@ -141,11 +174,15 @@ void UWuwaOverlayWidget::UnbindFromCurrentASC()
 		BoundASC->GetGameplayAttributeValueChangeDelegate(UWuWa_AttributeSetBase::GetMaxHpAttribute()).Remove(MaxHpChangedHandle);
 		BoundASC->GetGameplayAttributeValueChangeDelegate(UWuWa_AttributeSetBase::GetResonanceEnergyAttribute()).Remove(EnergyChangedHandle);
 		BoundASC->GetGameplayAttributeValueChangeDelegate(UWuWa_AttributeSetBase::GetMaxResonanceEnergyAttribute()).Remove(MaxEnergyChangedHandle);
+		BoundASC->GetGameplayAttributeValueChangeDelegate(UWuWa_AttributeSetBase::GetVariationEnergyAttribute()).Remove(VariationEnergyChangedHandle);
+		BoundASC->GetGameplayAttributeValueChangeDelegate(UWuWa_AttributeSetBase::GetMaxVariationEnergyAttribute()).Remove(MaxVariationEnergyChangedHandle);
 	}
 
 	HpChangedHandle.Reset();
 	MaxHpChangedHandle.Reset();
 	EnergyChangedHandle.Reset();
 	MaxEnergyChangedHandle.Reset();
+	VariationEnergyChangedHandle.Reset();
+	MaxVariationEnergyChangedHandle.Reset();
 	BoundASC = nullptr;
 }

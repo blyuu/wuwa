@@ -37,6 +37,12 @@ namespace StateTags
 {
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Invulnerable, "State.Invulnerable", "Immune to damage (dodge i-frame)");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Enemy_State_Attacking, "Enemy.State.Attacking", "Enemy is inside an attack danger window");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Enemy_State_Groggy, "Enemy.State.Groggy", "Enemy is staggered/groggy");
+}
+
+namespace DataTags
+{
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Data_Damage, "Data.Damage", "SetByCaller magnitude key: flat damage amount");
 }
 
 namespace EventTags
@@ -44,6 +50,7 @@ namespace EventTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_BaseAttack_Hit, "Event.BaseAttack.Hit", "Normal attack hit");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_EnemyAttack_Hit, "Event.EnemyAttack.Hit", "Enemy attack hit");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Combo_WindowOpen, "Event.Combo.WindowOpen", "Normal attack combo event");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Skill_Voice, "Event.Skill.Voice", "Play a random skill voice line");
 }
 
 namespace RangeTags

@@ -61,6 +61,11 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
 	bool bAlwaysShowWeapon = false;
 
+	// uniform scale applied to the spawned weapon. Bump it for big enemies so the weapon reads bigger;
+	// the hit trace grows with it too, because the WeaponRoot/WeaponTip sockets scale with the mesh. 1 = default.
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
+	float WeaponScale = 1.f;
+
 	virtual void HandleDeath();
 	// Actual Weapon that the player held
 	UPROPERTY()

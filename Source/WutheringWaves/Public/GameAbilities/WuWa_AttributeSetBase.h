@@ -40,19 +40,46 @@ private:
 	UPROPERTY()
 	FGameplayAttributeData Damage;
 
-	// Concerto / resonance energy that fills up and powers the resonance skill (shown on the HUD)
+	// Groggy / stagger gauge (bosses). Starts full (MaxGroggy), drains when hit; boss staggers at 0.
+	UPROPERTY()
+	FGameplayAttributeData Groggy;
+
+	UPROPERTY()
+	FGameplayAttributeData MaxGroggy;
+
+	// 공명회로 - powers each character's own resonance skill (shown on the overlay bar above HP)
 	UPROPERTY()
 	FGameplayAttributeData ResonanceEnergy;
 
 	UPROPERTY()
 	FGameplayAttributeData MaxResonanceEnergy;
 
+	// 궁극기 효율 게이지 - fills up to enable the ultimate/liberation
+	UPROPERTY()
+	FGameplayAttributeData UltimateEnergy;
+
+	UPROPERTY()
+	FGameplayAttributeData MaxUltimateEnergy;
+
+	// 변주 게이지 (the donut circuit) - fills on hit; full -> charged intro swap
+	UPROPERTY()
+	FGameplayAttributeData VariationEnergy;
+
+	UPROPERTY()
+	FGameplayAttributeData MaxVariationEnergy;
+
 public:
 	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, Hp);
 	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, MaxHp);
 	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, Damage);
+	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, Groggy);
+	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, MaxGroggy);
 	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, ResonanceEnergy);
 	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, MaxResonanceEnergy);
+	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, UltimateEnergy);
+	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, MaxUltimateEnergy);
+	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, VariationEnergy);
+	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, MaxVariationEnergy);
 	
 	
 	virtual bool PreGameplayEffectExecute(struct FGameplayEffectModCallbackData& Data) override;

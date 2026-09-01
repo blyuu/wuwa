@@ -10,6 +10,9 @@
 #include "DataAsset/CharacterDataAsset.h"
 #include "Character/PlayableCharacter.h"
 #include "Character/WeaponClass.h"
+#include "Enemy/EnemyCharacter.h"
+#include "GameAbilities/WuWa_AttributeSetBase.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 
 UGA_BaseAttack::UGA_BaseAttack()
@@ -86,8 +89,7 @@ void UGA_BaseAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, co
 	{
 		return;
 	}
-	
-	
+
 	CurrentMontage = BaseCharacter->CharacterData->Skills[BaseAttackTag].Montage;
 	UAnimMontage* BaseAttackMontage = CurrentMontage;
 	
@@ -114,6 +116,12 @@ void UGA_BaseAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, co
 		this, EventTags::Event_BaseAttack_Hit);
 	WaitHit->EventReceived.AddDynamic(this, &UGA_BaseAttack::OnHitEvent);
 	WaitHit->ReadyForActivation();
+
+	// Voice line event - an AnimNotify at each combo section fires this, so every combo hit can voice
+	UAbilityTask_WaitGameplayEvent* WaitVoice = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+		this, EventTags::Event_Skill_Voice);
+	WaitVoice->EventReceived.AddDynamic(this, &UGA_BaseAttack::OnVoiceEvent);
+	WaitVoice->ReadyForActivation();
 }
 
 void UGA_BaseAttack::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility,
@@ -158,17 +166,53 @@ void UGA_BaseAttack::OnHitEvent(FGameplayEventData Payload)
 			UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor);
 			
 			FGameplayTag BaseAttackTag = GetAssetTags().First();
-			TSubclassOf<UGameplayEffect> DamageEffectClass = BaseCharacter->CharacterData->Skills[BaseAttackTag].DamageEffect;
-			
+			const FSkillData& SkillData = BaseCharacter->CharacterData->Skills[BaseAttackTag];
+			TSubclassOf<UGameplayEffect> DamageEffectClass = SkillData.DamageEffect;
+
 			if (TargetASC && DamageEffectClass)
 			{
 				FGameplayEffectContextHandle Context = GetAbilitySystemComponentFromActorInfo()->MakeEffectContext();
-				
+
 				FGameplayEffectSpecHandle Spec = GetAbilitySystemComponentFromActorInfo()->MakeOutgoingSpec(DamageEffectClass, 1.f, Context);
-				
+
 				TargetASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
 			}
+
+			// drain the enemy's groggy gauge by this skill's groggy value
+			if (AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(HitActor))
+			{
+				Enemy->ApplyGroggyDamage(SkillData.GroggyDamage);
+			}
+
+			// gain 변주 게이지 (charged-swap circuit) on a confirmed hit
+			if (SkillData.VariationGain > 0.f)
+			{
+				GetAbilitySystemComponentFromActorInfo()->ApplyModToAttribute(
+					UWuWa_AttributeSetBase::GetVariationEnergyAttribute(),
+					EGameplayModOp::Additive, SkillData.VariationGain);
+			}
 		}
+	}
+}
+
+void UGA_BaseAttack::OnVoiceEvent(FGameplayEventData Payload)
+{
+	PlaySkillVoice();
+}
+
+void UGA_BaseAttack::PlaySkillVoice()
+{
+	APlayableCharacter* BaseCharacter = Cast<APlayableCharacter>(GetCurrentActorInfo()->AvatarActor);
+	if (!BaseCharacter || !BaseCharacter->CharacterData) return;
+
+	const FSkillData& Skill = BaseCharacter->CharacterData->Skills[GetAssetTags().First()];
+	if (Skill.VoiceLines.Num() == 0) return;
+
+	// pick a random line each time so the same combo doesn't always sound identical
+	const int32 Index = FMath::RandRange(0, Skill.VoiceLines.Num() - 1);
+	if (USoundBase* Voice = Skill.VoiceLines[Index])
+	{
+		UGameplayStatics::SpawnSoundAttached(Voice, BaseCharacter->GetMesh());
 	}
 }
 

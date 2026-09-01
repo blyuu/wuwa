@@ -34,6 +34,9 @@ void ABaseCharacter::BeginPlay()
 		FAttachmentTransformRules::SnapToTargetNotIncludingScale,
 		TEXT("WeaponProp02"));
 
+		// attach ignores scale, so set the weapon's own scale here (per-character, e.g. bigger for enemies)
+		CurrentWeapon->SetActorScale3D(FVector(WeaponScale));
+
 		// always visible characters (enemies) keep it drawn, otherwise hide it and draw only on attack
 		if (bAlwaysShowWeapon)
 		{

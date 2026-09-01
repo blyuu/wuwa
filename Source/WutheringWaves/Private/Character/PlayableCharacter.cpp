@@ -12,6 +12,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Character/WuwaInputConfig.h"
 #include "DataAsset/CharacterDataAsset.h"
+#include "GameAbilities/WuWa_AttributeSetBase.h"
 
 APlayableCharacter::APlayableCharacter()
 {
@@ -19,7 +20,7 @@ APlayableCharacter::APlayableCharacter()
 	SpringArmComponent = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 
 	SpringArmComponent->SetupAttachment(RootComponent);
-	SpringArmComponent->TargetArmLength = 250.0f;
+	SpringArmComponent->TargetArmLength = 300.0f;
 
 	CameraComponent->SetupAttachment(SpringArmComponent);
 
@@ -65,8 +66,15 @@ void APlayableCharacter::PossessedBy(AController* NewController)
 	if (CharacterData)
 	{
 		InitializeAttributes(CharacterData->MaxHp);
+
+		// 변주 게이지 (charged-swap circuit) starts empty, max from the data asset
+		if (AttributeSet)
+		{
+			AttributeSet->InitMaxVariationEnergy(CharacterData->MaxVariationEnergy);
+			AttributeSet->InitVariationEnergy(0.f);
+		}
 	}
-	
+
 	AddInputMapping();
 }
 

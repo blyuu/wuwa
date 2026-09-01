@@ -45,6 +45,12 @@ private:
 	UFUNCTION()
 	void OnHitEvent(FGameplayEventData Payload);
 
+	// fired by an AnimNotify placed on each combo section -> plays one random voice line
+	UFUNCTION()
+	void OnVoiceEvent(FGameplayEventData Payload);
+
+	void PlaySkillVoice();
+
 	void PerformRangedTrace();
 
 };

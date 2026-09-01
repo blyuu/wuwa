@@ -3,7 +3,6 @@
 #include "Character/WeaponAnimNotifyState.h"
 #include "Character/BaseCharacter.h"
 #include "Character/WeaponClass.h"
-#include "Enemy/EnemyCharacter.h"
 #include "AbilitySystemComponent.h"
 #include "Abilities/GameplayAbilityTargetTypes.h"
 #include "GameplayTags/WuwaGameplayTags.h"
@@ -37,17 +36,12 @@ void UWeaponAnimNotifyState::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimS
 	TArray<FHitResult> HitResults;
 	TArray<AActor*> ActorsToIgnore = { Character };
 
-	// enemies swing with a fatter trace (they read as bigger); the player keeps the base radius
-	const float EffectiveRadius = Character->IsA(AEnemyCharacter::StaticClass())
-		? TraceRadius * EnemyTraceRadiusMultiplier
-		: TraceRadius;
-
 	// sweep from prev tip -> current tip (the blade tip draws the widest arc)
 	UKismetSystemLibrary::SphereTraceMulti(
 		MeshComp,
 		PrevSocketTip,
 		CurrSocketTip,
-		EffectiveRadius,
+		TraceRadius,
 		UEngineTypes::ConvertToTraceType(ECC_Pawn),
 		false,
 		ActorsToIgnore,

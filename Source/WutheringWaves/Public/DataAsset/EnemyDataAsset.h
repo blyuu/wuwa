@@ -20,8 +20,9 @@ struct FEnemySkillData
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<class UGameplayEffect> DamageEffect;
 
+	// flat damage this attack deals. Fed straight into the damage GE via SetByCaller (Data.Damage) - no curve table.
 	UPROPERTY(EditDefaultsOnly)
-	float DamageMultiplier = 1.f;
+	float Damage = 10.f;
 
 	UPROPERTY(EditDefaultsOnly)
 	float Cooldown = 0.f;
@@ -62,8 +63,51 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	float MaxHp = 100.f;
 
+	// groggy/stagger gauge size (bar under the boss health bar). Starts full at this value and drains to 0.
+	UPROPERTY(EditDefaultsOnly)
+	float MaxGroggy = 100.f;
+
+	// stagger animation played while groggy. Split it into sections: an intro (collapse/sit-down) that
+	// plays once, then the section named below (the "staying down" pose) which loops until recovery.
+	UPROPERTY(EditDefaultsOnly, Category = "Groggy")
+	TObjectPtr<class UAnimMontage> GroggyMontage;
+
+	// montage section to loop while staggered. Add a section with this name where the "staying down" part
+	// begins. If it doesn't exist, the whole montage loops from the start instead.
+	UPROPERTY(EditDefaultsOnly, Category = "Groggy")
+	FName GroggyLoopSection = TEXT("Loop");
+
+	// get-up / return-to-normal animation played once when groggy fully recovers (AI waits for it to finish)
+	UPROPERTY(EditDefaultsOnly, Category = "Groggy")
+	TObjectPtr<class UAnimMontage> GroggyRecoverMontage;
+
+	// seconds for groggy to gradually refill 0 -> full after a break (= how long the stagger lasts).
+	// only runs while staggered; there's no groggy recovery during normal combat.
+	UPROPERTY(EditDefaultsOnly, Category = "Groggy")
+	float GroggyRecoverTime = 8.f;
+
+	// incoming damage multiplier while the enemy is groggy
+	UPROPERTY(EditDefaultsOnly, Category = "Groggy")
+	float GroggyDamageMultiplier = 1.5f;
+
 	// enemy move speed (goes into CharacterMovement MaxWalkSpeed) player default is 600 so enemy usually lower
 	UPROPERTY(EditDefaultsOnly)
 	float MoveSpeed = 300.f;
+
+	//========================================================================
+	// Boss HUD (only used when bIsBoss is true)
+	//========================================================================
+
+	// true = show the top-screen boss health bar while this enemy is alive
+	UPROPERTY(EditDefaultsOnly, Category = "Boss")
+	bool bIsBoss = false;
+
+	// name shown above the boss health bar
+	UPROPERTY(EditDefaultsOnly, Category = "Boss")
+	FText DisplayName;
+
+	// level shown next to the boss name
+	UPROPERTY(EditDefaultsOnly, Category = "Boss")
+	int32 Level = 1;
 
 };

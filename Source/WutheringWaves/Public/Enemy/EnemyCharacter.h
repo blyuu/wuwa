@@ -26,6 +26,10 @@ public:
 	
 	
 	void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
+
+	// player skills call this on hit to drain groggy; at 0 the enemy enters the groggy state
+	void ApplyGroggyDamage(float Amount);
 
 	// called by the attack Task in the BehaviorTree (BTTask_EnemyAttack)
 	// picks a skill for the current phase sets CurrentSkillTag and fires GA_EnemyAttack
@@ -43,4 +47,16 @@ public:
 
 protected:
 	virtual void HandleDeath() override;
+
+	// groggy state transitions
+	void EnterGroggy();
+	void ExitGroggy();            // groggy gauge refilled -> begin recovery (play the get-up montage)
+	void FinishGroggyRecovery();  // get-up finished -> resume AI, fully back to normal
+
+	// bound to the get-up montage's end so AI only resumes once the animation completes
+	void OnGroggyRecoverMontageEnded(class UAnimMontage* Montage, bool bInterrupted);
+
+	// bIsGroggy: incapacitated (stagger + get-up). bIsRecovering: in the get-up phase (gauge already full).
+	bool bIsGroggy = false;
+	bool bIsRecovering = false;
 };

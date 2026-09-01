@@ -25,7 +25,19 @@ struct FSkillData
 	
 	UPROPERTY(EditDefaultsOnly)
 	float DamageMultiplier = 1.f;
-	
+
+	// how much this skill drains from an enemy's groggy gauge on hit
+	UPROPERTY(EditDefaultsOnly)
+	float GroggyDamage = 0.f;
+
+	// 변주 게이지 (charged-swap circuit) the attacker gains when this skill hits
+	UPROPERTY(EditDefaultsOnly)
+	float VariationGain = 0.f;
+
+	// voice lines for this skill; one is picked at random and played when the skill is used
+	UPROPERTY(EditDefaultsOnly)
+	TArray<TObjectPtr<class USoundBase>> VoiceLines;
+
 	UPROPERTY(EditDefaultsOnly)
 	float Cooldown = 0.f;
 
@@ -67,11 +79,19 @@ public:
 	UPROPERTY(EditDefaultsOnly, meta = (Categories = "Character.Range"))
 	FGameplayTag RangeTag;
 
+	// portrait shown in the right-side team panel
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<class UTexture2D> Portrait;
+
 	// The three dodge montages for this character (perfect / forward / back).
 	UPROPERTY(EditDefaultsOnly, Category = "Dodge")
 	FDodgeData Dodge;
 
 	
+	// max 변주 게이지 (charged-swap circuit). The gauge fills to this on hits.
+	UPROPERTY(EditDefaultsOnly)
+	float MaxVariationEnergy = 100.f;
+
 	// To give different hp per character -> Later will use functions to give that
 	UPROPERTY(EditDefaultsOnly)
 	float MaxHp = 100.f;
