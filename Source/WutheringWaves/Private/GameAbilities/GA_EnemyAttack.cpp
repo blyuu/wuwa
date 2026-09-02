@@ -10,6 +10,8 @@
 #include "DataAsset/EnemyDataAsset.h"
 #include "Enemy/EnemyCharacter.h"
 #include "GameplayTags/WuwaGameplayTags.h"
+#include "GameFramework/Pawn.h"
+#include "Kismet/GameplayStatics.h"
 
 UGA_EnemyAttack::UGA_EnemyAttack()
 {
@@ -35,6 +37,21 @@ void UGA_EnemyAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, c
 	}
 
 	CurrentMontage = Enemy->CurrentMontage;
+
+	// face the player as the attack commits so the opening frames aren't aimed at air.
+	// continuous per-attack tracking during the montage is done by the AN_TrackTarget notify-state.
+	if (APawn* Player = UGameplayStatics::GetPlayerPawn(Enemy, 0))
+	{
+		FVector ToPlayer = Player->GetActorLocation() - Enemy->GetActorLocation();
+		ToPlayer.Z = 0.f;
+		if (!ToPlayer.IsNearlyZero())
+		{
+			FRotator Face = ToPlayer.Rotation();
+			Face.Pitch = 0.f;
+			Face.Roll = 0.f;
+			Enemy->SetActorRotation(Face);
+		}
+	}
 
 	UAbilityTask_PlayMontageAndWait* PlayAttackMontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, NAME_None, CurrentMontage);
 	PlayAttackMontageTask->OnBlendOut.AddDynamic(this, &UGA_EnemyAttack::EndMontage);

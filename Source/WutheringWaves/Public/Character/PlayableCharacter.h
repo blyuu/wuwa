@@ -8,6 +8,7 @@
 #include "GameplayTagContainer.h"
 #include "PlayableCharacter.generated.h"
 
+class AEnemyCharacter;
 
 UCLASS()
 class WUTHERINGWAVES_API APlayableCharacter : public ABaseCharacter
@@ -16,6 +17,8 @@ class WUTHERINGWAVES_API APlayableCharacter : public ABaseCharacter
 
 public:
 	APlayableCharacter();
+
+	virtual void Tick(float DeltaTime) override;
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
@@ -69,4 +72,36 @@ public:
 	// The character's data asset (element, skills + their icons, etc.) - used by the HUD.
 	UFUNCTION(BlueprintPure, Category = "Character")
 	UCharacterDataAsset* GetCharacterData() const { return CharacterData; }
+
+	//========================================================================
+	// Auto-target ("soft lock"). Attacks / skills / ultimate call FaceTargetForAttack
+	// on activation so the character turns toward (and optionally slides to) the enemy
+	// it is about to hit. All shared here so every ability reuses one code path.
+	//========================================================================
+
+	// nearest live enemy overall (no range / cone filter). Used by the charged-swap intro.
+	UFUNCTION(BlueprintPure, Category = "Targeting")
+	AEnemyCharacter* FindNearestEnemy() const;
+
+	// best enemy to attack: nearest live one inside the camera-facing cone and within range.
+	UFUNCTION(BlueprintPure, Category = "Targeting")
+	AEnemyCharacter* AcquireTargetEnemy() const;
+
+	// turn toward the acquired target (+ step in if the data asset asks). Abilities call this
+	// once on activation; returns the enemy it locked onto (or null if there was none).
+	UFUNCTION(BlueprintCallable, Category = "Targeting")
+	AEnemyCharacter* FaceTargetForAttack();
+
+private:
+	// running blend state for the turn / step-in kicked off by FaceTargetForAttack
+	bool bTargetAssistActive = false;
+	float TargetAssistElapsed = 0.f;
+	float TargetAssistBlendTime = 0.f;
+	bool bTargetAssistStepIn = false;
+	FRotator TargetAssistStartRot;
+	FRotator TargetAssistGoalRot;
+	FVector TargetAssistStartLoc;
+	FVector TargetAssistGoalLoc;
+	// orient-to-movement is switched off during the blend so it can't fight our rotation; restored after
+	bool bSavedOrientToMovement = true;
 };

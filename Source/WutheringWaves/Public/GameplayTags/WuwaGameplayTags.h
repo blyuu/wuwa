@@ -54,7 +54,7 @@ namespace DataTags
 
 namespace EventTags
 {
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_BaseAttack_Hit);			//Normal attack hit event
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Attack_Hit);			//Attack hit event (base attack / skill / ultimate)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_EnemyAttack_Hit);			//Enemy attack hit event
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combo_WindowOpen);			//Normal attack combo event
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Skill_Voice);				//play a random skill voice line

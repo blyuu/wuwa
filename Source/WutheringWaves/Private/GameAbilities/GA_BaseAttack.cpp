@@ -78,9 +78,12 @@ void UGA_BaseAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, co
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 	
 	APlayableCharacter* BaseCharacter = Cast<APlayableCharacter>(ActorInfo->AvatarActor);
-	
+
 	BaseCharacter->CurrentWeapon->ShowWeapon();
-	
+
+	// soft-lock: turn toward (and step in on) the enemy this swing is aimed at
+	BaseCharacter->FaceTargetForAttack();
+
 	UE_LOG(LogTemp, Display, TEXT("Used BaseAttack"));
 	
 	FGameplayTag BaseAttackTag = GetAssetTags().First();
@@ -113,7 +116,7 @@ void UGA_BaseAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, co
 
 	// Take Damage Event
 	UAbilityTask_WaitGameplayEvent* WaitHit = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-		this, EventTags::Event_BaseAttack_Hit);
+		this, EventTags::Event_Attack_Hit);
 	WaitHit->EventReceived.AddDynamic(this, &UGA_BaseAttack::OnHitEvent);
 	WaitHit->ReadyForActivation();
 
@@ -191,6 +194,14 @@ void UGA_BaseAttack::OnHitEvent(FGameplayEventData Payload)
 					UWuWa_AttributeSetBase::GetVariationEnergyAttribute(),
 					EGameplayModOp::Additive, SkillData.VariationGain);
 			}
+
+			// build the 궁극기 효율 게이지 (ultimate) on a confirmed hit
+			if (SkillData.UltimateGain > 0.f)
+			{
+				GetAbilitySystemComponentFromActorInfo()->ApplyModToAttribute(
+					UWuWa_AttributeSetBase::GetUltimateEnergyAttribute(),
+					EGameplayModOp::Additive, SkillData.UltimateGain);
+			}
 		}
 	}
 }
@@ -255,6 +266,6 @@ void UGA_BaseAttack::PerformRangedTrace()
 
 FGameplayTag UGA_BaseAttack::GetComboTargetEventTag()
 {
-	return FGameplayTag::RequestGameplayTag("Event.BaseAttack.Hit");
+	return EventTags::Event_Attack_Hit;
 }
 

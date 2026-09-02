@@ -48,7 +48,7 @@ namespace DataTags
 
 namespace EventTags
 {
-	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_BaseAttack_Hit, "Event.BaseAttack.Hit", "Normal attack hit");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Attack_Hit, "Event.Attack.Hit", "Attack hit (base attack / skill / ultimate)");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_EnemyAttack_Hit, "Event.EnemyAttack.Hit", "Enemy attack hit");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Combo_WindowOpen, "Event.Combo.WindowOpen", "Normal attack combo event");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Skill_Voice, "Event.Skill.Voice", "Play a random skill voice line");

@@ -33,6 +33,4 @@ protected:
 
 private:
 	TObjectPtr<UAnimMontage> CurrentMontage = nullptr;
-
-	AEnemyCharacter* FindNearestEnemy(const FVector& From) const;
 };

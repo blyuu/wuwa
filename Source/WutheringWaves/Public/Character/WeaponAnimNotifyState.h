@@ -24,7 +24,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Trace")
 	float TraceRadius = 10.f;
 
-	// gameplay event tag to fire on hit if left empty it uses Event.BaseAttack.Hit (player)
+	// gameplay event tag to fire on hit. if left empty it uses Event.Attack.Hit (player base attack / skill / ultimate)
 	// on enemy montages set this to Event.EnemyAttack.Hit
 	UPROPERTY(EditAnywhere, Category = "Trace", meta = (Categories = "Event"))
 	FGameplayTag HitEventTag;

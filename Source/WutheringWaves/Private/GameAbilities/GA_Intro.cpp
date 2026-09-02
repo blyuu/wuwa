@@ -28,7 +28,7 @@ void UGA_Intro::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
 	}
 
 	// appear at the nearest enemy's left / right / behind (random), facing it
-	if (AEnemyCharacter* Enemy = FindNearestEnemy(Character->GetActorLocation()))
+	if (AEnemyCharacter* Enemy = Character->FindNearestEnemy())
 	{
 		const FVector EnemyLoc = Enemy->GetActorLocation();
 		const FVector Fwd = Enemy->GetActorForwardVector();
@@ -82,29 +82,4 @@ void UGA_Intro::EndMontage()
 	{
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 	}
-}
-
-AEnemyCharacter* UGA_Intro::FindNearestEnemy(const FVector& From) const
-{
-	UWorld* World = GetWorld();
-	if (!World)
-	{
-		return nullptr;
-	}
-
-	TArray<AActor*> Enemies;
-	UGameplayStatics::GetAllActorsOfClass(World, AEnemyCharacter::StaticClass(), Enemies);
-
-	AEnemyCharacter* Best = nullptr;
-	float BestDistSq = TNumericLimits<float>::Max();
-	for (AActor* Actor : Enemies)
-	{
-		const float DistSq = FVector::DistSquared(From, Actor->GetActorLocation());
-		if (DistSq < BestDistSq)
-		{
-			BestDistSq = DistSq;
-			Best = Cast<AEnemyCharacter>(Actor);
-		}
-	}
-	return Best;
 }

@@ -34,6 +34,10 @@ struct FSkillData
 	UPROPERTY(EditDefaultsOnly)
 	float VariationGain = 0.f;
 
+	// 궁극기 효율 게이지 the attacker gains when this skill hits (fills toward the ultimate/liberation)
+	UPROPERTY(EditDefaultsOnly)
+	float UltimateGain = 0.f;
+
 	// voice lines for this skill; one is picked at random and played when the skill is used
 	UPROPERTY(EditDefaultsOnly)
 	TArray<TObjectPtr<class USoundBase>> VoiceLines;
@@ -42,6 +46,44 @@ struct FSkillData
 	float Cooldown = 0.f;
 
 
+};
+
+// Auto-target ("soft lock") tuning. On attack / skill / ultimate the character turns toward
+// the best nearby enemy and optionally slides in ("follows" it). Kept per-character so the
+// feel stays data-driven (a big melee wants a bigger step-in, a ranged char rotates only).
+USTRUCT(BlueprintType)
+struct FTargetAssistData
+{
+	GENERATED_BODY()
+
+	// master switch - turn the whole assist off for a character if desired
+	UPROPERTY(EditDefaultsOnly)
+	bool bEnabled = true;
+
+	// enemies farther than this (from the character) are ignored
+	UPROPERTY(EditDefaultsOnly)
+	float Range = 800.f;
+
+	// only enemies within this half-angle (deg) of the camera's forward are eligible, so we lock
+	// onto what the player is roughly aiming at rather than something off to the side / behind
+	UPROPERTY(EditDefaultsOnly)
+	float ConeHalfAngleDeg = 60.f;
+
+	// slide toward the target on activation (the "follow" feel). false = rotate only (e.g. ranged)
+	UPROPERTY(EditDefaultsOnly)
+	bool bStepIn = true;
+
+	// stop this far short of the target so we don't overlap it
+	UPROPERTY(EditDefaultsOnly)
+	float StopDistance = 150.f;
+
+	// never slide more than this in one assist (keeps a far target from yanking us across the arena)
+	UPROPERTY(EditDefaultsOnly)
+	float MaxStepDistance = 400.f;
+
+	// seconds the turn / step-in blend runs
+	UPROPERTY(EditDefaultsOnly)
+	float BlendTime = 0.18f;
 };
 
 // Dodge has one input but three montages picked by situation, so it gets its own
@@ -90,6 +132,10 @@ public:
 	// The three dodge montages for this character (perfect / forward / back).
 	UPROPERTY(EditDefaultsOnly, Category = "Dodge")
 	FDodgeData Dodge;
+
+	// auto-target ("soft lock") behaviour when this character attacks
+	UPROPERTY(EditDefaultsOnly, Category = "Targeting")
+	FTargetAssistData TargetAssist;
 
 	
 	// max 변주 게이지 (charged-swap circuit). The gauge fills to this on hits.

@@ -66,6 +66,10 @@ private:
 	void HandleVariationChanged(const FOnAttributeChangeData& Data);
 	void PushVariation();
 
+	// ultimate gauge (radial fill behind the Liberation icon) - shows how full the ultimate is
+	void HandleUltimateChanged(const FOnAttributeChangeData& Data);
+	void PushUltimate();
+
 	void UnbindFromCurrentASC();
 
 	// Bound by name to Image widgets in the WBP subclass. The WBP MUST contain three
@@ -87,6 +91,14 @@ private:
 	UPROPERTY(EditAnywhere, Category = "HUD")
 	FName VariationPercentParam = TEXT("Percent");
 
+	// Ultimate gauge - an Image behind the Liberation icon using the same radial-fill material. Optional.
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UImage> UltimateGauge;
+
+	// Scalar parameter on the ultimate gauge material that holds the 0..1 fill.
+	UPROPERTY(EditAnywhere, Category = "HUD")
+	FName UltimatePercentParam = TEXT("Percent");
+
 	// The ASC we're currently listening to.
 	UPROPERTY()
 	TObjectPtr<UAbilitySystemComponent> BoundASC;
@@ -94,10 +106,15 @@ private:
 	UPROPERTY()
 	TObjectPtr<UMaterialInstanceDynamic> GaugeMID;
 
+	UPROPERTY()
+	TObjectPtr<UMaterialInstanceDynamic> UltimateGaugeMID;
+
 	FDelegateHandle HpChangedHandle;
 	FDelegateHandle MaxHpChangedHandle;
 	FDelegateHandle EnergyChangedHandle;
 	FDelegateHandle MaxEnergyChangedHandle;
 	FDelegateHandle VariationEnergyChangedHandle;
 	FDelegateHandle MaxVariationEnergyChangedHandle;
+	FDelegateHandle UltimateEnergyChangedHandle;
+	FDelegateHandle MaxUltimateEnergyChangedHandle;
 };

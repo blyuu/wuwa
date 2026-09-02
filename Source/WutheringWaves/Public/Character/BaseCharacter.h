@@ -67,6 +67,10 @@ public:
 	float WeaponScale = 1.f;
 
 	virtual void HandleDeath();
+
+	// true once HandleDeath has run - target-assist / AI use this to skip corpses
+	bool IsDead() const { return bIsDead; }
+
 	// Actual Weapon that the player held
 	UPROPERTY()
 	AWeaponClass* CurrentWeapon;

@@ -66,8 +66,8 @@ void UWeaponAnimNotifyState::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimS
 		EventData.Instigator = Character;
 		EventData.Target     = HitActor;
 
-		// fire with the tag set on the montage if not set fall back to the player default tag
-		const FGameplayTag EventToSend = HitEventTag.IsValid() ? HitEventTag : EventTags::Event_BaseAttack_Hit;
+		// fire with the tag set on the montage if not set fall back to the player attack tag
+		const FGameplayTag EventToSend = HitEventTag.IsValid() ? HitEventTag : EventTags::Event_Attack_Hit;
 		ASC->HandleGameplayEvent(EventToSend, &EventData);
 	}
 
