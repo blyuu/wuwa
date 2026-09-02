@@ -44,6 +44,13 @@ namespace StateTags
 namespace DataTags
 {
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Data_Damage, "Data.Damage", "SetByCaller magnitude key: flat damage amount");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Data_CooldownDuration, "Data.CooldownDuration", "SetByCaller key: cooldown seconds");
+}
+
+namespace CooldownTags
+{
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Cooldown_ResonanceSkill, "Cooldown.ResonanceSkill", "Resonance skill on cooldown");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Cooldown_Liberation, "Cooldown.Liberation", "Ultimate on cooldown");
 }
 
 namespace EventTags

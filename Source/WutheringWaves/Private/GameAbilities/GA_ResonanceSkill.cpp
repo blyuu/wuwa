@@ -13,6 +13,7 @@
 #include "Enemy/EnemyCharacter.h"
 #include "GameAbilities/WuWa_AttributeSetBase.h"
 #include "GameplayTags/WuwaGameplayTags.h"
+#include "Kismet/GameplayStatics.h"
 
 UGA_ResonanceSkill::UGA_ResonanceSkill()
 {
@@ -65,7 +66,68 @@ void UGA_ResonanceSkill::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 	WaitHit->EventReceived.AddDynamic(this, &UGA_ResonanceSkill::OnHitEvent);
 	WaitHit->ReadyForActivation();
 
+	// voice line event - an AnimNotify on the montage fires this -> plays one random voice line
+	UAbilityTask_WaitGameplayEvent* WaitVoice = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+		this, EventTags::Event_Skill_Voice);
+	WaitVoice->EventReceived.AddDynamic(this, &UGA_ResonanceSkill::OnVoiceEvent);
+	WaitVoice->ReadyForActivation();
+
+	// apply cooldown: duration from the data (SetByCaller), and add our cooldown tag dynamically so the
+	// HUD can read the remaining time and re-cast is blocked (see CanActivateAbility).
+	if (CooldownEffect && CooldownTag.IsValid() && Skill->Cooldown > 0.f)
+	{
+		if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+		{
+			FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(CooldownEffect, 1.f, ASC->MakeEffectContext());
+			if (Spec.IsValid())
+			{
+				Spec.Data->SetSetByCallerMagnitude(DataTags::Data_CooldownDuration, Skill->Cooldown);
+				Spec.Data->DynamicGrantedTags.AddTag(CooldownTag);
+				ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+			}
+		}
+	}
+
 	UE_LOG(LogTemp, Display, TEXT("Used Resonance Skill (%s)"), *SkillTag.ToString());
+}
+
+bool UGA_ResonanceSkill::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
+{
+	if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
+	{
+		return false;
+	}
+
+	// blocked while our cooldown tag is on the owner
+	const UAbilitySystemComponent* ASC = ActorInfo ? ActorInfo->AbilitySystemComponent.Get() : nullptr;
+	if (ASC && CooldownTag.IsValid() && ASC->HasMatchingGameplayTag(CooldownTag))
+	{
+		return false;
+	}
+
+	return true;
+}
+
+void UGA_ResonanceSkill::OnVoiceEvent(FGameplayEventData Payload)
+{
+	PlaySkillVoice();
+}
+
+void UGA_ResonanceSkill::PlaySkillVoice()
+{
+	APlayableCharacter* Character = Cast<APlayableCharacter>(GetCurrentActorInfo()->AvatarActor);
+	if (!Character || !Character->CharacterData) return;
+
+	const FSkillData* Skill = Character->CharacterData->Skills.Find(GetAssetTags().First());
+	if (!Skill || Skill->VoiceLines.Num() == 0) return;
+
+	// pick a random line each time so the same skill doesn't always sound identical
+	const int32 Index = FMath::RandRange(0, Skill->VoiceLines.Num() - 1);
+	if (USoundBase* Voice = Skill->VoiceLines[Index])
+	{
+		UGameplayStatics::SpawnSoundAttached(Voice, Character->GetMesh());
+	}
 }
 
 void UGA_ResonanceSkill::OnHitEvent(FGameplayEventData Payload)

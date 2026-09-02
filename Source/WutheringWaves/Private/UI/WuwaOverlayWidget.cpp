@@ -5,6 +5,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "Components/Image.h"
+#include "Components/TextBlock.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "GameAbilities/WuWa_AttributeSetBase.h"
 #include "DataAsset/CharacterDataAsset.h"
@@ -24,7 +25,8 @@ namespace
 		{
 			if (Skill->Icon)
 			{
-				Image->SetBrushFromTexture(Skill->Icon);
+				// Icon may be a Texture2D or a Paper2D Sprite - SetBrushResourceObject handles both.
+				Image->SetBrushResourceObject(Skill->Icon);
 				Image->SetVisibility(ESlateVisibility::HitTestInvisible);
 				return;
 			}
@@ -94,12 +96,129 @@ void UWuwaOverlayWidget::SetSkillIcons(const UCharacterDataAsset* Data)
 	ApplyIcon(BaseAttackIcon, Data, AbilityTags::Ability_Type_BaseAttack);
 	ApplyIcon(ResonanceSkillIcon, Data, AbilityTags::Ability_Type_ResonanceSkill);
 	ApplyIcon(LiberationIcon, Data, AbilityTags::Ability_Type_Liberation);
+
+	// element icon inside the variation donut - chosen by the character's element tag (from its data asset)
+	if (ElementIcon)
+	{
+		const TObjectPtr<UTexture2D>* Found = ElementIcons.Find(Data->ElementTag);
+		if (Found && *Found)
+		{
+			ElementIcon->SetBrushFromTexture(*Found);
+			ElementIcon->SetVisibility(ESlateVisibility::HitTestInvisible);
+		}
+		else
+		{
+			// no icon mapped for this element -> hide the slot
+			ElementIcon->SetVisibility(ESlateVisibility::Collapsed);
+		}
+	}
+
+	// tint the gauges (variation donut + ultimate) to match the character's element
+	ApplyElementColor(Data->ElementTag);
+}
+
+void UWuwaOverlayWidget::ApplyElementColor(const FGameplayTag& ElementTag)
+{
+	// no mapping -> fall back to white (the material's default)
+	const FLinearColor* Found = ElementColors.Find(ElementTag);
+	const FLinearColor Color = Found ? *Found : FLinearColor::White;
+
+	if (VariationGauge)
+	{
+		if (!GaugeMID)
+		{
+			GaugeMID = VariationGauge->GetDynamicMaterial();
+		}
+		if (GaugeMID)
+		{
+			GaugeMID->SetVectorParameterValue(GaugeColorParam, Color);
+		}
+	}
+
+	if (UltimateGauge)
+	{
+		if (!UltimateGaugeMID)
+		{
+			UltimateGaugeMID = UltimateGauge->GetDynamicMaterial();
+		}
+		if (UltimateGaugeMID)
+		{
+			UltimateGaugeMID->SetVectorParameterValue(GaugeColorParam, Color);
+		}
+	}
 }
 
 void UWuwaOverlayWidget::NativeDestruct()
 {
 	UnbindFromCurrentASC();
 	Super::NativeDestruct();
+}
+
+void UWuwaOverlayWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+
+	// cooldowns are time-based, so poll them each frame (attribute delegates don't fire per-tick)
+	UpdateCooldown(ResonanceSkillCooldown, ResonanceSkillCooldownText, SkillCooldownMID, CooldownTags::Cooldown_ResonanceSkill);
+	UpdateCooldown(LiberationCooldown, LiberationCooldownText, LiberationCooldownMID, CooldownTags::Cooldown_Liberation);
+}
+
+void UWuwaOverlayWidget::UpdateCooldown(UImage* Radial, UTextBlock* Text, TObjectPtr<UMaterialInstanceDynamic>& MID, const FGameplayTag& CooldownTag)
+{
+	if (!Radial && !Text)
+	{
+		return;
+	}
+
+	// find the longest-remaining active effect that grants this cooldown tag
+	float Remaining = 0.f;
+	float Duration = 0.f;
+	if (BoundASC && CooldownTag.IsValid())
+	{
+		const FGameplayEffectQuery Query = FGameplayEffectQuery::MakeQuery_MatchAnyOwningTags(FGameplayTagContainer(CooldownTag));
+		for (const TPair<float, float>& Pair : BoundASC->GetActiveEffectsTimeRemainingAndDuration(Query))
+		{
+			Remaining = FMath::Max(Remaining, Pair.Key);
+			Duration = FMath::Max(Duration, Pair.Value);
+		}
+	}
+
+	const bool bOnCooldown = Remaining > 0.f && Duration > 0.f;
+
+	// radial sweep: Percent = remaining / duration (full at cast, empties as it ticks down)
+	if (Radial)
+	{
+		if (bOnCooldown)
+		{
+			if (!MID)
+			{
+				MID = Radial->GetDynamicMaterial();
+			}
+			if (MID)
+			{
+				MID->SetScalarParameterValue(CooldownPercentParam, Remaining / Duration);
+			}
+			Radial->SetVisibility(ESlateVisibility::HitTestInvisible);
+		}
+		else
+		{
+			Radial->SetVisibility(ESlateVisibility::Collapsed);
+		}
+	}
+
+	// countdown text (e.g. 12.0 -> 11.9)
+	if (Text)
+	{
+		if (bOnCooldown)
+		{
+			Text->SetText(FText::FromString(FString::Printf(TEXT("%.1f"), Remaining)));
+			Text->SetVisibility(ESlateVisibility::HitTestInvisible);
+		}
+		else
+		{
+			Text->SetVisibility(ESlateVisibility::Collapsed);
+		}
+	}
 }
 
 void UWuwaOverlayWidget::HandleHealthChanged(const FOnAttributeChangeData& /*Data*/)
@@ -179,7 +298,7 @@ void UWuwaOverlayWidget::HandleUltimateChanged(const FOnAttributeChangeData& /*D
 
 void UWuwaOverlayWidget::PushUltimate()
 {
-	if (!BoundASC || !UltimateGauge)
+	if (!BoundASC)
 	{
 		return;
 	}
@@ -187,14 +306,25 @@ void UWuwaOverlayWidget::PushUltimate()
 	const float Energy = BoundASC->GetNumericAttribute(UWuWa_AttributeSetBase::GetUltimateEnergyAttribute());
 	const float MaxEnergy = BoundASC->GetNumericAttribute(UWuWa_AttributeSetBase::GetMaxUltimateEnergyAttribute());
 	const float Percent = MaxEnergy > 0.f ? Energy / MaxEnergy : 0.f;
+	const bool bReady = MaxEnergy > 0.f && Energy >= MaxEnergy - 0.01f;
 
-	if (!UltimateGaugeMID)
+	// radial fill behind the icon
+	if (UltimateGauge)
 	{
-		UltimateGaugeMID = UltimateGauge->GetDynamicMaterial(); // MID from the ultimate gauge image's material
+		if (!UltimateGaugeMID)
+		{
+			UltimateGaugeMID = UltimateGauge->GetDynamicMaterial(); // MID from the ultimate gauge image's material
+		}
+		if (UltimateGaugeMID)
+		{
+			UltimateGaugeMID->SetScalarParameterValue(UltimatePercentParam, Percent);
+		}
 	}
-	if (UltimateGaugeMID)
+
+	// gray out the ultimate icon until the gauge is full, full color once ready
+	if (LiberationIcon)
 	{
-		UltimateGaugeMID->SetScalarParameterValue(UltimatePercentParam, Percent);
+		LiberationIcon->SetColorAndOpacity(bReady ? FLinearColor::White : UltimateNotReadyTint);
 	}
 }
 

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "GameplayTagContainer.h"
 #include "WuwaOverlayWidget.generated.h"
 
 struct FOnAttributeChangeData;
@@ -11,6 +12,8 @@ class UAbilitySystemComponent;
 class UImage;
 class UCharacterDataAsset;
 class UMaterialInstanceDynamic;
+class UTexture2D;
+class UTextBlock;
 
 /**
  * Bottom-of-screen player status bar (HP / Level / Resonance energy).
@@ -38,6 +41,9 @@ public:
 
 protected:
 	virtual void NativeDestruct() override;
+
+	// polls the active character's skill/ultimate cooldowns each frame and drives the cooldown UI
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 	//========================================================================
 	// Implement these in the WBP subclass to actually update the widgets.
@@ -70,6 +76,12 @@ private:
 	void HandleUltimateChanged(const FOnAttributeChangeData& Data);
 	void PushUltimate();
 
+	// tint both gauge materials (variation donut + ultimate) to the active character's element color
+	void ApplyElementColor(const FGameplayTag& ElementTag);
+
+	// drive one ability's cooldown UI: radial fill (remaining/duration) + countdown text
+	void UpdateCooldown(UImage* Radial, UTextBlock* Text, TObjectPtr<UMaterialInstanceDynamic>& MID, const FGameplayTag& CooldownTag);
+
 	void UnbindFromCurrentASC();
 
 	// Bound by name to Image widgets in the WBP subclass. The WBP MUST contain three
@@ -91,6 +103,39 @@ private:
 	UPROPERTY(EditAnywhere, Category = "HUD")
 	FName VariationPercentParam = TEXT("Percent");
 
+	// Element icon shown inside the variation donut - picked by the active character's element tag. Optional.
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UImage> ElementIcon;
+
+	// Element tag -> element icon texture. Fill this in the WBP defaults (one entry per element).
+	UPROPERTY(EditAnywhere, Category = "HUD", meta = (Categories = "Character.Element"))
+	TMap<FGameplayTag, TObjectPtr<UTexture2D>> ElementIcons;
+
+	// Element tag -> gauge fill color (variation donut + ultimate). Fill this in the WBP defaults.
+	UPROPERTY(EditAnywhere, Category = "HUD", meta = (Categories = "Character.Element"))
+	TMap<FGameplayTag, FLinearColor> ElementColors;
+
+	// Vector parameter (RGBA) on the gauge materials that holds the fill color.
+	UPROPERTY(EditAnywhere, Category = "HUD")
+	FName GaugeColorParam = TEXT("EnergyColor");
+
+	// --- Cooldown UI: a radial-fill Image over each icon + a countdown TextBlock. All optional. ---
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UImage> ResonanceSkillCooldown;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UImage> LiberationCooldown;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> ResonanceSkillCooldownText;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> LiberationCooldownText;
+
+	// Scalar param on the cooldown materials that holds the 0..1 sweep (remaining / duration).
+	UPROPERTY(EditAnywhere, Category = "HUD")
+	FName CooldownPercentParam = TEXT("Percent");
+
 	// Ultimate gauge - an Image behind the Liberation icon using the same radial-fill material. Optional.
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UImage> UltimateGauge;
@@ -98,6 +143,10 @@ private:
 	// Scalar parameter on the ultimate gauge material that holds the 0..1 fill.
 	UPROPERTY(EditAnywhere, Category = "HUD")
 	FName UltimatePercentParam = TEXT("Percent");
+
+	// Tint on the Liberation icon while the ultimate gauge isn't full yet (grayed out). White once ready.
+	UPROPERTY(EditAnywhere, Category = "HUD")
+	FLinearColor UltimateNotReadyTint = FLinearColor(0.3f, 0.3f, 0.3f, 1.f);
 
 	// The ASC we're currently listening to.
 	UPROPERTY()
@@ -108,6 +157,12 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UMaterialInstanceDynamic> UltimateGaugeMID;
+
+	UPROPERTY()
+	TObjectPtr<UMaterialInstanceDynamic> SkillCooldownMID;
+
+	UPROPERTY()
+	TObjectPtr<UMaterialInstanceDynamic> LiberationCooldownMID;
 
 	FDelegateHandle HpChangedHandle;
 	FDelegateHandle MaxHpChangedHandle;

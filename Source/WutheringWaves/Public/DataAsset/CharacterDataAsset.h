@@ -13,9 +13,9 @@ struct FSkillData
 {
 	GENERATED_BODY()
 
-	// HUD icon for this ability shown on the skill bar
-	UPROPERTY(EditDefaultsOnly)
-	TObjectPtr<class UTexture2D> Icon;
+	// HUD icon for this ability shown on the skill bar. Accepts a Texture2D or a Paper2D Sprite.
+	UPROPERTY(EditDefaultsOnly, meta = (AllowedClasses = "/Script/Engine.Texture2D, /Script/Paper2D.PaperSprite"))
+	TObjectPtr<UObject> Icon;
 
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<class UAnimMontage> Montage;

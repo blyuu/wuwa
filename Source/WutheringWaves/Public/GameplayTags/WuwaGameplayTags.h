@@ -50,6 +50,13 @@ namespace StateTags
 namespace DataTags
 {
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Damage);					//SetByCaller magnitude key: flat damage amount
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_CooldownDuration);			//SetByCaller key: cooldown seconds (skill/ultimate)
+}
+
+namespace CooldownTags
+{
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_ResonanceSkill);		//granted while the resonance skill is on cooldown
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Liberation);			//granted while the ultimate is on cooldown
 }
 
 namespace EventTags

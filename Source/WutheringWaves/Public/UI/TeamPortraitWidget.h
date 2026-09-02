@@ -62,6 +62,17 @@ protected:
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UImage> ActiveRing2;
 
+	// Slot number badge (1 / 2 / 3). Shown on the INACTIVE slots as a switch hint, hidden on the active slot.
+	// Put the "1" image in NumberIcon0, "2" in NumberIcon1, "3" in NumberIcon2 in the WBP. Optional.
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UImage> NumberIcon0;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UImage> NumberIcon1;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UImage> NumberIcon2;
+
 private:
 	// variation gauge -> portrait blink (donut fill itself lives on the overlay widget)
 	void HandleVariationChanged(const FOnAttributeChangeData& Data);

@@ -16,8 +16,9 @@ void UTeamPortraitWidget::SetTeam(const TArray<TObjectPtr<APlayableCharacter>>& 
 {
 	ActiveSlot = ActiveIndex;
 
-	UImage* Slots[3] = { Portrait0, Portrait1, Portrait2 };
-	UImage* Rings[3] = { ActiveRing0, ActiveRing1, ActiveRing2 };
+	UImage* Slots[3]   = { Portrait0, Portrait1, Portrait2 };
+	UImage* Rings[3]   = { ActiveRing0, ActiveRing1, ActiveRing2 };
+	UImage* Numbers[3] = { NumberIcon0, NumberIcon1, NumberIcon2 };
 
 	for (int32 i = 0; i < 3; ++i)
 	{
@@ -42,6 +43,12 @@ void UTeamPortraitWidget::SetTeam(const TArray<TObjectPtr<APlayableCharacter>>& 
 		if (UImage* Ring = Rings[i])
 		{
 			Ring->SetVisibility((bHasChar && i == ActiveIndex) ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+		}
+
+		// number badge (1/2/3): shown on the INACTIVE slots (switch hint), hidden on the active one
+		if (UImage* Number = Numbers[i])
+		{
+			Number->SetVisibility((bHasChar && i != ActiveIndex) ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 		}
 	}
 
