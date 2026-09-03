@@ -135,6 +135,12 @@ int32 APlayableCharacter::GetCharacterLevel() const
 	return CharacterData ? CharacterData->Level : 1;
 }
 
+UAnimMontage* APlayableCharacter::GetHitReactMontage() const
+{
+	// data-driven: pull the flinch montage from this character's data asset
+	return CharacterData ? CharacterData->HitReactMontage : nullptr;
+}
+
 void APlayableCharacter::UnPossessed()
 {
 	RemoveInputMapping();

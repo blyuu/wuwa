@@ -68,6 +68,17 @@ public:
 
 	virtual void HandleDeath();
 
+	// fallback flinch montage - used by characters NOT driven by a CharacterDataAsset (enemies set it on their BP).
+	// Playable characters ignore this and pull from their data asset (see GetHitReactMontage override).
+	UPROPERTY(EditAnywhere, Category = "Combat")
+	TObjectPtr<class UAnimMontage> HitReactMontage;
+
+	// which montage to flinch with. Base returns HitReactMontage; playable characters override to use CharacterData.
+	virtual class UAnimMontage* GetHitReactMontage() const;
+
+	// plays the hit-react montage on the mesh (no-op if none is set or the character is already dead)
+	virtual void PlayHitReact();
+
 	// true once HandleDeath has run - target-assist / AI use this to skip corpses
 	bool IsDead() const { return bIsDead; }
 

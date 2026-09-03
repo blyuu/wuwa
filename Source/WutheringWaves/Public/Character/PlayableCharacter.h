@@ -73,6 +73,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Character")
 	UCharacterDataAsset* GetCharacterData() const { return CharacterData; }
 
+	// playable characters keep everything data-driven: the flinch montage comes from the data asset
+	virtual class UAnimMontage* GetHitReactMontage() const override;
+
 	//========================================================================
 	// Auto-target ("soft lock"). Attacks / skills / ultimate call FaceTargetForAttack
 	// on activation so the character turns toward (and optionally slides to) the enemy

@@ -142,6 +142,10 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<class UAnimMontage> IntroMontage;
 
+	// flinch / hit-react montage played when this character takes damage but survives
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<class UAnimMontage> HitReactMontage;
+
 	// The three dodge montages for this character (perfect / forward / back).
 	UPROPERTY(EditDefaultsOnly, Category = "Dodge")
 	FDodgeData Dodge;

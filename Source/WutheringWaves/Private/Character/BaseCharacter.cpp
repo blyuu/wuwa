@@ -5,6 +5,9 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Character/WeaponClass.h"
 #include "GameAbilities/WuWa_AttributeSetBase.h"
+#include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
+#include "Components/SkeletalMeshComponent.h"
 
 
 ABaseCharacter::ABaseCharacter()
@@ -116,7 +119,37 @@ void ABaseCharacter::HandleDeath()
 	}
 	
 	SetActorEnableCollision(false);
-	
+
 	UE_LOG(LogTemp,Warning, TEXT("%s Dead"), *GetName());
-	
+
+}
+
+UAnimMontage* ABaseCharacter::GetHitReactMontage() const
+{
+	// base: the BP-set fallback (enemies). Playable characters override this to read their data asset.
+	return HitReactMontage;
+}
+
+void ABaseCharacter::PlayHitReact()
+{
+	if (bIsDead)
+	{
+		return;
+	}
+
+	UAnimMontage* Montage = GetHitReactMontage();
+	if (!Montage)
+	{
+		return;
+	}
+
+	// play the flinch on the mesh. This naturally interrupts an in-progress attack montage
+	// (the ability's OnInterrupted fires and ends it) - i.e. getting hit breaks your swing.
+	if (USkeletalMeshComponent* MeshComp = GetMesh())
+	{
+		if (UAnimInstance* Anim = MeshComp->GetAnimInstance())
+		{
+			Anim->Montage_Play(Montage);
+		}
+	}
 }
