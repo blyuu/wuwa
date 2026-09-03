@@ -14,6 +14,9 @@ UWuWa_AttributeSetBase::UWuWa_AttributeSetBase()
 	InitHp(100.f);
 	InitMaxHp(100.f);
 
+	// 공격력 배수 starts at 1.0 (no buff). 수수's team buff pushes it up (e.g. 1.3) for its duration.
+	InitAttackPower(1.f);
+
 	// Resonance energy starts empty and builds up during combat
 	InitResonanceEnergy(0.f);
 	InitMaxResonanceEnergy(100.f);
@@ -45,6 +48,16 @@ void UWuWa_AttributeSetBase::PostGameplayEffectExecute(const struct FGameplayEff
 	{
 		float DmgValue = GetDamage();
 		SetDamage(0.f);
+
+		// scale by the attacker's current attack power (1.0 = no buff; 수수's team buff raises it)
+		if (UAbilitySystemComponent* SourceASC = Data.EffectSpec.GetContext().GetInstigatorAbilitySystemComponent())
+		{
+			const float Atk = SourceASC->GetNumericAttribute(GetAttackPowerAttribute());
+			if (Atk > 0.f)
+			{
+				DmgValue *= Atk;
+			}
+		}
 
 		AActor* TargetActor = Data.Target.AbilityActorInfo->AvatarActor.Get();
 

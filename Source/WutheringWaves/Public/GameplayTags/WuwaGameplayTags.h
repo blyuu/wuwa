@@ -51,6 +51,8 @@ namespace DataTags
 {
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Damage);					//SetByCaller magnitude key: flat damage amount
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_CooldownDuration);			//SetByCaller key: cooldown seconds (skill/ultimate)
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_AttackBuff);				//SetByCaller key: attack buff amount (added to AttackPower)
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_BuffDuration);				//SetByCaller key: buff duration seconds
 }
 
 namespace CooldownTags

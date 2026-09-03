@@ -45,10 +45,7 @@ void UGA_ResonanceSkill::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 		return;
 	}
 
-	if (Character->CurrentWeapon)
-	{
-		Character->CurrentWeapon->ShowWeapon();
-	}
+	// weapon is now drawn/sheathed by AN_WeaponVisibility notifies on the montage (not here)
 
 	CurrentMontage = Skill->Montage;
 

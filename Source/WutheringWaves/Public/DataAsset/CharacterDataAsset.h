@@ -38,6 +38,15 @@ struct FSkillData
 	UPROPERTY(EditDefaultsOnly)
 	float UltimateGain = 0.f;
 
+	// --- support buff (수수 등) : used by GA_TeamBuff, ignored by damage skills ---
+	// how much this skill adds to every teammate's AttackPower (0.3 = +30% damage while active)
+	UPROPERTY(EditDefaultsOnly)
+	float BuffAmount = 0.f;
+
+	// how long the attack buff lasts, in seconds
+	UPROPERTY(EditDefaultsOnly)
+	float BuffDuration = 0.f;
+
 	// voice lines for this skill; one is picked at random and played when the skill is used
 	UPROPERTY(EditDefaultsOnly)
 	TArray<TObjectPtr<class USoundBase>> VoiceLines;
@@ -124,6 +133,10 @@ public:
 	// portrait shown in the right-side team panel
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<class UTexture2D> Portrait;
+
+	// per-character 공명 회로 image shown behind/around the resonance energy bar. Texture2D or Paper2D Sprite.
+	UPROPERTY(EditDefaultsOnly, meta = (AllowedClasses = "/Script/Engine.Texture2D, /Script/Paper2D.PaperSprite"))
+	TObjectPtr<UObject> ResonanceCircuitIcon;
 
 	// played by GA_Intro when this character is swapped in via a charged swap (flank appear)
 	UPROPERTY(EditDefaultsOnly)

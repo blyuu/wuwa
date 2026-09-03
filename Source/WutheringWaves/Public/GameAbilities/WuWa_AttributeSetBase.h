@@ -40,6 +40,11 @@ private:
 	UPROPERTY()
 	FGameplayAttributeData Damage;
 
+	// 공격력 배수 (1.0 = 버프 없음). Support characters (수수) raise this on the whole team for a while,
+	// and every outgoing hit is multiplied by the attacker's value in PostGameplayEffectExecute.
+	UPROPERTY()
+	FGameplayAttributeData AttackPower;
+
 	// Groggy / stagger gauge (bosses). Starts full (MaxGroggy), drains when hit; boss staggers at 0.
 	UPROPERTY()
 	FGameplayAttributeData Groggy;
@@ -72,6 +77,7 @@ public:
 	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, Hp);
 	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, MaxHp);
 	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, Damage);
+	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, AttackPower);
 	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, Groggy);
 	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, MaxGroggy);
 	ATTRIBUTE_ACCESSORS(UWuWa_AttributeSetBase, ResonanceEnergy);

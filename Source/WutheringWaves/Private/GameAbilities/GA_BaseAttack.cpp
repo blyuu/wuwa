@@ -79,7 +79,7 @@ void UGA_BaseAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, co
 	
 	APlayableCharacter* BaseCharacter = Cast<APlayableCharacter>(ActorInfo->AvatarActor);
 
-	BaseCharacter->CurrentWeapon->ShowWeapon();
+	// weapon is now drawn/sheathed by AN_WeaponVisibility notifies on the montage (not here)
 
 	// soft-lock: turn toward (and step in on) the enemy this swing is aimed at
 	BaseCharacter->FaceTargetForAttack();
