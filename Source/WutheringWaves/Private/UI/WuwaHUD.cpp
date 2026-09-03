@@ -6,9 +6,13 @@
 #include "UI/WuwaOverlayWidget.h"
 #include "UI/WuwaBossHealthWidget.h"
 #include "UI/TeamPortraitWidget.h"
+#include "UI/DamageNumberWidget.h"
 #include "Character/PlayableCharacter.h"
 #include "Character/TeamComponent.h"
 #include "Enemy/EnemyCharacter.h"
+#include "Framework/CombatFeedbackSubsystem.h"
+#include "GameFramework/PlayerController.h"
+#include "Engine/World.h"
 
 void AWuwaHUD::BeginPlay()
 {
@@ -25,6 +29,59 @@ void AWuwaHUD::BeginPlay()
 			OnPlayerCharacterChanged(Char);
 		}
 	}
+
+	// listen for damage so we can pop floating numbers over enemies
+	if (UWorld* World = GetWorld())
+	{
+		if (UCombatFeedbackSubsystem* Feedback = World->GetSubsystem<UCombatFeedbackSubsystem>())
+		{
+			DamageDelegateHandle = Feedback->OnDamage.AddUObject(this, &AWuwaHUD::HandleDamageEvent);
+		}
+	}
+}
+
+void AWuwaHUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (UWorld* World = GetWorld())
+	{
+		if (UCombatFeedbackSubsystem* Feedback = World->GetSubsystem<UCombatFeedbackSubsystem>())
+		{
+			Feedback->OnDamage.Remove(DamageDelegateHandle);
+		}
+	}
+
+	Super::EndPlay(EndPlayReason);
+}
+
+void AWuwaHUD::HandleDamageEvent(const FCombatFeedbackEvent& Event)
+{
+	APlayerController* PC = GetOwningPlayerController();
+	if (!PC || !DamageNumberClass)
+	{
+		return;
+	}
+
+	// world hit position -> screen. Behind the camera -> skip (don't draw a number off-screen).
+	FVector2D ScreenPos;
+	if (!PC->ProjectWorldLocationToScreen(Event.WorldLocation, ScreenPos))
+	{
+		return;
+	}
+
+	// small scatter so stacked hits fan out instead of overlapping perfectly (fountain feel)
+	ScreenPos.X += FMath::FRandRange(-25.f, 25.f);
+	ScreenPos.Y += FMath::FRandRange(-15.f, 5.f);
+
+	UDamageNumberWidget* Number = CreateWidget<UDamageNumberWidget>(PC, DamageNumberClass);
+	if (!Number)
+	{
+		return;
+	}
+
+	Number->SetDamage(Event.Amount, Event.ElementTag);
+	Number->AddToViewport();
+	// true = convert the pixel position into DPI-scaled viewport space so it lands on the enemy
+	Number->SetPositionInViewport(ScreenPos, true);
 }
 
 void AWuwaHUD::EnsureOverlay()

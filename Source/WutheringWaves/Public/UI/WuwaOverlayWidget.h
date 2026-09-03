@@ -10,7 +10,6 @@
 struct FOnAttributeChangeData;
 class UAbilitySystemComponent;
 class UImage;
-class UProgressBar;
 class UCharacterDataAsset;
 class UMaterialInstanceDynamic;
 class UTexture2D;
@@ -108,10 +107,17 @@ private:
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UImage> ElementIcon;
 
-	// Resonance energy bar. Its Percent is driven in C++ (PushResonanceEnergy); its FillImage is swapped
-	// per character (SetSkillIcons) so each character shows its own 공명 회로 fill. Optional.
+	// per-character 공명 회로 energy image - set from the active character's data asset (like the skill icons). Optional.
 	UPROPERTY(meta = (BindWidgetOptional))
-	TObjectPtr<UProgressBar> ResonanceEnergyBar;
+	TObjectPtr<UImage> ResonanceCircuitImage;
+
+	// "current / max HP" text drawn inside the health bar. Optional.
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> HealthText;
+
+	// buff icon above the HP bar - shown while the character has an attack buff (AttackPower > 1). Optional.
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UImage> BuffIcon;
 
 	// Element tag -> element icon texture. Fill this in the WBP defaults (one entry per element).
 	UPROPERTY(EditAnywhere, Category = "HUD", meta = (Categories = "Character.Element"))

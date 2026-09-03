@@ -5,9 +5,13 @@
 
 #include "GameplayEffectExtension.h"
 #include "Character/BaseCharacter.h"
+#include "Character/PlayableCharacter.h"
 #include "Enemy/EnemyCharacter.h"
 #include "DataAsset/EnemyDataAsset.h"
+#include "DataAsset/CharacterDataAsset.h"
+#include "Framework/CombatFeedbackSubsystem.h"
 #include "GameplayTags/WuwaGameplayTags.h"
+#include "Engine/World.h"
 
 UWuWa_AttributeSetBase::UWuWa_AttributeSetBase()
 {
@@ -84,6 +88,46 @@ void UWuWa_AttributeSetBase::PostGameplayEffectExecute(const struct FGameplayEff
 			if (ABaseCharacter* Character = Cast<ABaseCharacter>(TargetActor))
 			{
 				Character->HandleDeath();
+			}
+		}
+		else if (DmgValue > 0.f)
+		{
+			// took damage but survived -> play the flinch / hit-react
+			if (ABaseCharacter* Character = Cast<ABaseCharacter>(TargetActor))
+			{
+				Character->PlayHitReact();
+			}
+		}
+
+		// floating damage number: report to the combat-feedback hub (the HUD listens and pops a screen-space
+		// number over the enemy). Only for damage dealt TO enemies - i.e. what the player did.
+		if (DmgValue > 0.f)
+		{
+			if (AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(TargetActor))
+			{
+				if (UWorld* World = Enemy->GetWorld())
+				{
+					if (UCombatFeedbackSubsystem* Feedback = World->GetSubsystem<UCombatFeedbackSubsystem>())
+					{
+						FCombatFeedbackEvent Event;
+						Event.Amount = DmgValue;
+						Event.WorldLocation = Enemy->GetActorLocation() + FVector(0.f, 0.f, 90.f);
+
+						// attacker's element -> number color
+						if (UAbilitySystemComponent* SrcASC = Data.EffectSpec.GetContext().GetInstigatorAbilitySystemComponent())
+						{
+							if (APlayableCharacter* Attacker = Cast<APlayableCharacter>(SrcASC->GetAvatarActor()))
+							{
+								if (const UCharacterDataAsset* CharData = Attacker->GetCharacterData())
+								{
+									Event.ElementTag = CharData->ElementTag;
+								}
+							}
+						}
+
+						Feedback->ReportDamage(Event);
+					}
+				}
 			}
 		}
 

@@ -9,8 +9,10 @@
 class UWuwaOverlayWidget;
 class UWuwaBossHealthWidget;
 class UTeamPortraitWidget;
+class UDamageNumberWidget;
 class APlayableCharacter;
 class AEnemyCharacter;
+struct FCombatFeedbackEvent;
 
 /**
  * Player HUD. Owns the bottom status overlay and re-points it at whichever
@@ -31,6 +33,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	// Assign the WBP_Overlay subclass here in the BP_WuwaHUD defaults.
 	UPROPERTY(EditDefaultsOnly, Category = "HUD")
@@ -44,12 +47,21 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "HUD")
 	TSubclassOf<UTeamPortraitWidget> TeamPortraitClass;
 
+	// Assign the WBP_DamageNumber subclass here - one is spawned per hit (floating damage number).
+	UPROPERTY(EditDefaultsOnly, Category = "HUD")
+	TSubclassOf<UDamageNumberWidget> DamageNumberClass;
+
 private:
 	// Creates the overlay once and adds it to the viewport. Safe to call repeatedly.
 	void EnsureOverlay();
 
 	// Creates the team portrait panel once. Safe to call repeatedly.
 	void EnsureTeamPortrait();
+
+	// Combat feedback: spawn a floating damage number at the projected screen position of the hit.
+	void HandleDamageEvent(const FCombatFeedbackEvent& Event);
+
+	FDelegateHandle DamageDelegateHandle;
 
 	UPROPERTY()
 	TObjectPtr<UWuwaOverlayWidget> OverlayWidget;

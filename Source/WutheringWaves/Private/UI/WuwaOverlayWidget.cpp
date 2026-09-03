@@ -5,7 +5,6 @@
 
 #include "AbilitySystemComponent.h"
 #include "Components/Image.h"
-#include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "GameAbilities/WuWa_AttributeSetBase.h"
@@ -114,12 +113,19 @@ void UWuwaOverlayWidget::SetSkillIcons(const UCharacterDataAsset* Data)
 		}
 	}
 
-	// per-character 공명 회로 fill: swap the resonance bar's FillImage brush to this character's texture
-	if (ResonanceEnergyBar && Data->ResonanceCircuitIcon)
+	// per-character 공명 회로 energy image (Texture2D or Sprite), swapped like the skill icons
+	if (ResonanceCircuitImage)
 	{
-		FProgressBarStyle Style = ResonanceEnergyBar->GetWidgetStyle();
-		Style.FillImage.SetResourceObject(Data->ResonanceCircuitIcon);
-		ResonanceEnergyBar->SetWidgetStyle(Style);
+		if (Data->ResonanceCircuitIcon)
+		{
+			ResonanceCircuitImage->SetBrushResourceObject(Data->ResonanceCircuitIcon);
+			ResonanceCircuitImage->SetVisibility(ESlateVisibility::HitTestInvisible);
+		}
+		else
+		{
+			// no image set for this character -> hide the slot
+			ResonanceCircuitImage->SetVisibility(ESlateVisibility::Collapsed);
+		}
 	}
 
 	// tint the gauges (variation donut + ultimate) to match the character's element
@@ -170,6 +176,14 @@ void UWuwaOverlayWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTi
 	// cooldowns are time-based, so poll them each frame (attribute delegates don't fire per-tick)
 	UpdateCooldown(ResonanceSkillCooldown, ResonanceSkillCooldownText, SkillCooldownMID, CooldownTags::Cooldown_ResonanceSkill);
 	UpdateCooldown(LiberationCooldown, LiberationCooldownText, LiberationCooldownMID, CooldownTags::Cooldown_Liberation);
+
+	// buff icon above the HP bar: shown while the active character's attack power is boosted (수수's team buff)
+	if (BuffIcon)
+	{
+		const bool bBuffed = BoundASC
+			&& BoundASC->GetNumericAttribute(UWuWa_AttributeSetBase::GetAttackPowerAttribute()) > 1.001f;
+		BuffIcon->SetVisibility(bBuffed ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+	}
 }
 
 void UWuwaOverlayWidget::UpdateCooldown(UImage* Radial, UTextBlock* Text, TObjectPtr<UMaterialInstanceDynamic>& MID, const FGameplayTag& CooldownTag)
@@ -259,6 +273,14 @@ void UWuwaOverlayWidget::PushHealth()
 
 	const float Hp = BoundASC->GetNumericAttribute(UWuWa_AttributeSetBase::GetHpAttribute());
 	const float MaxHp = BoundASC->GetNumericAttribute(UWuWa_AttributeSetBase::GetMaxHpAttribute());
+
+	// "cur / max" text inside the bar
+	if (HealthText)
+	{
+		HealthText->SetText(FText::FromString(
+			FString::Printf(TEXT("%d/%d"), FMath::RoundToInt(Hp), FMath::RoundToInt(MaxHp))));
+	}
+
 	OnHealthChanged(Hp, MaxHp);
 }
 
@@ -271,14 +293,6 @@ void UWuwaOverlayWidget::PushResonanceEnergy()
 
 	const float Energy = BoundASC->GetNumericAttribute(UWuWa_AttributeSetBase::GetResonanceEnergyAttribute());
 	const float MaxEnergy = BoundASC->GetNumericAttribute(UWuWa_AttributeSetBase::GetMaxResonanceEnergyAttribute());
-
-	// drive the bar fill directly (the FillImage was set per character in SetSkillIcons)
-	if (ResonanceEnergyBar)
-	{
-		ResonanceEnergyBar->SetPercent(MaxEnergy > 0.f ? Energy / MaxEnergy : 0.f);
-	}
-
-	// keep the BP hook too, for any extra visuals the WBP layers on
 	OnResonanceEnergyChanged(Energy, MaxEnergy);
 }
 
