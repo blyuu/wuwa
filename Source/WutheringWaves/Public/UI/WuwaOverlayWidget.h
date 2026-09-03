@@ -10,6 +10,7 @@
 struct FOnAttributeChangeData;
 class UAbilitySystemComponent;
 class UImage;
+class UProgressBar;
 class UCharacterDataAsset;
 class UMaterialInstanceDynamic;
 class UTexture2D;
@@ -106,6 +107,11 @@ private:
 	// Element icon shown inside the variation donut - picked by the active character's element tag. Optional.
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UImage> ElementIcon;
+
+	// Resonance energy bar. Its Percent is driven in C++ (PushResonanceEnergy); its FillImage is swapped
+	// per character (SetSkillIcons) so each character shows its own 공명 회로 fill. Optional.
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UProgressBar> ResonanceEnergyBar;
 
 	// Element tag -> element icon texture. Fill this in the WBP defaults (one entry per element).
 	UPROPERTY(EditAnywhere, Category = "HUD", meta = (Categories = "Character.Element"))

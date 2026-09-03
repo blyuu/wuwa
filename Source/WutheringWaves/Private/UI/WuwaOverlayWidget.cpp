@@ -5,6 +5,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "Components/Image.h"
+#include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "GameAbilities/WuWa_AttributeSetBase.h"
@@ -111,6 +112,14 @@ void UWuwaOverlayWidget::SetSkillIcons(const UCharacterDataAsset* Data)
 			// no icon mapped for this element -> hide the slot
 			ElementIcon->SetVisibility(ESlateVisibility::Collapsed);
 		}
+	}
+
+	// per-character 공명 회로 fill: swap the resonance bar's FillImage brush to this character's texture
+	if (ResonanceEnergyBar && Data->ResonanceCircuitIcon)
+	{
+		FProgressBarStyle Style = ResonanceEnergyBar->GetWidgetStyle();
+		Style.FillImage.SetResourceObject(Data->ResonanceCircuitIcon);
+		ResonanceEnergyBar->SetWidgetStyle(Style);
 	}
 
 	// tint the gauges (variation donut + ultimate) to match the character's element
@@ -262,6 +271,14 @@ void UWuwaOverlayWidget::PushResonanceEnergy()
 
 	const float Energy = BoundASC->GetNumericAttribute(UWuWa_AttributeSetBase::GetResonanceEnergyAttribute());
 	const float MaxEnergy = BoundASC->GetNumericAttribute(UWuWa_AttributeSetBase::GetMaxResonanceEnergyAttribute());
+
+	// drive the bar fill directly (the FillImage was set per character in SetSkillIcons)
+	if (ResonanceEnergyBar)
+	{
+		ResonanceEnergyBar->SetPercent(MaxEnergy > 0.f ? Energy / MaxEnergy : 0.f);
+	}
+
+	// keep the BP hook too, for any extra visuals the WBP layers on
 	OnResonanceEnergyChanged(Energy, MaxEnergy);
 }
 

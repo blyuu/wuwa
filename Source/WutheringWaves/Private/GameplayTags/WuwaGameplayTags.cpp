@@ -45,6 +45,8 @@ namespace DataTags
 {
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Data_Damage, "Data.Damage", "SetByCaller magnitude key: flat damage amount");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Data_CooldownDuration, "Data.CooldownDuration", "SetByCaller key: cooldown seconds");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Data_AttackBuff, "Data.AttackBuff", "SetByCaller key: attack buff amount");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Data_BuffDuration, "Data.BuffDuration", "SetByCaller key: buff duration seconds");
 }
 
 namespace CooldownTags

@@ -13,10 +13,8 @@ public class WutheringWaves : ModuleRules
 			"Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "MotionWarping", "GameplayAbilities", "GameplayTags", "GameplayTasks", "AIModule", "NavigationSystem", "UMG"
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] {  });
-
-		// Uncomment if you are using Slate UI
-		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
+		// Slate/SlateCore: needed to touch FSlateBrush / FProgressBarStyle directly (per-character bar fill image)
+		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
 		
 		// Uncomment if you are using online features
 		// PrivateDependencyModuleNames.Add("OnlineSubsystem");
