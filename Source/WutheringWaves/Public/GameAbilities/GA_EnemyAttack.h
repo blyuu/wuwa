@@ -29,4 +29,10 @@ private:
 
 	UFUNCTION()
 	void OnHitEvent(FGameplayEventData Payload);
+
+	// fired by an AnimNotify (Event.Skill.Voice) on the attack montage -> plays one random voice line
+	UFUNCTION()
+	void OnVoiceEvent(FGameplayEventData Payload);
+
+	void PlaySkillVoice();
 };

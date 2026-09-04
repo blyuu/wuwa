@@ -76,7 +76,14 @@ public:
 	// which montage to flinch with. Base returns HitReactMontage; playable characters override to use CharacterData.
 	virtual class UAnimMontage* GetHitReactMontage() const;
 
-	// plays the hit-react montage on the mesh (no-op if none is set or the character is already dead)
+	// fallback hit voice lines - enemies set these on their BP; playable characters override to use CharacterData.
+	UPROPERTY(EditAnywhere, Category = "Combat")
+	TArray<TObjectPtr<class USoundBase>> HitVoiceLines;
+
+	// hit voice lines to pick from. Base returns HitVoiceLines; playable characters override to use CharacterData.
+	virtual const TArray<TObjectPtr<class USoundBase>>& GetHitVoiceLines() const;
+
+	// plays the hit-react montage + a random hit voice (no-op if none set or already dead)
 	virtual void PlayHitReact();
 
 	// true once HandleDeath has run - target-assist / AI use this to skip corpses

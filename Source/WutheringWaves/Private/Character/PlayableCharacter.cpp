@@ -111,13 +111,20 @@ void APlayableCharacter::PossessedBy(AController* NewController)
 	
 	if (CharacterData)
 	{
-		InitializeAttributes(CharacterData->MaxHp);
-
-		// 변주 게이지 (charged-swap circuit) starts empty, max from the data asset
-		if (AttributeSet)
+		// Initialize attributes only ONCE per character. Re-possessing on a team swap must NOT reset
+		// HP / gauges back to full, otherwise damage taken before the swap is wiped on swap-back.
+		if (!bAttributesInitialized)
 		{
-			AttributeSet->InitMaxVariationEnergy(CharacterData->MaxVariationEnergy);
-			AttributeSet->InitVariationEnergy(0.f);
+			bAttributesInitialized = true;
+
+			InitializeAttributes(CharacterData->MaxHp);
+
+			// 변주 게이지 (charged-swap circuit) starts empty, max from the data asset
+			if (AttributeSet)
+			{
+				AttributeSet->InitMaxVariationEnergy(CharacterData->MaxVariationEnergy);
+				AttributeSet->InitVariationEnergy(0.f);
+			}
 		}
 
 		// start at walk speed (sprint switches to RunSpeed while the dodge key is held)
@@ -139,6 +146,13 @@ UAnimMontage* APlayableCharacter::GetHitReactMontage() const
 {
 	// data-driven: pull the flinch montage from this character's data asset
 	return CharacterData ? CharacterData->HitReactMontage : nullptr;
+}
+
+const TArray<TObjectPtr<USoundBase>>& APlayableCharacter::GetHitVoiceLines() const
+{
+	// data-driven: pull the hit voice lines from this character's data asset
+	static const TArray<TObjectPtr<USoundBase>> Empty;
+	return CharacterData ? CharacterData->HitVoiceLines : Empty;
 }
 
 void APlayableCharacter::UnPossessed()

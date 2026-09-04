@@ -135,6 +135,13 @@ void UGA_ResonanceSkill::OnHitEvent(FGameplayEventData Payload)
 	AActor* HitActor = const_cast<AActor*>(Payload.Target.Get());
 	if (!HitActor) return;
 
+	// the enemy may backstep out of this hit (chance from its data asset). If it dodges,
+	// nothing lands - no damage, groggy, or gauge gain.
+	if (AEnemyCharacter* DodgeEnemy = Cast<AEnemyCharacter>(HitActor))
+	{
+		if (DodgeEnemy->TryDodge()) return;
+	}
+
 	// look up this ability's own skill data (ResonanceSkill or Liberation) by its asset tag
 	const FGameplayTag SkillTag = GetAssetTags().First();
 	const FSkillData* Skill = Character->CharacterData->Skills.Find(SkillTag);

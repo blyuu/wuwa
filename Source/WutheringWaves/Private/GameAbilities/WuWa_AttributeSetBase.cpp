@@ -12,6 +12,7 @@
 #include "Framework/CombatFeedbackSubsystem.h"
 #include "GameplayTags/WuwaGameplayTags.h"
 #include "Engine/World.h"
+#include "Kismet/GameplayStatics.h"
 
 UWuWa_AttributeSetBase::UWuWa_AttributeSetBase()
 {
@@ -105,6 +106,12 @@ void UWuWa_AttributeSetBase::PostGameplayEffectExecute(const struct FGameplayEff
 		{
 			if (AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(TargetActor))
 			{
+				// impact SFX at the enemy - data-driven, plays on every confirmed hit with no per-montage notify
+				if (Enemy->EnemyDataAsset && Enemy->EnemyDataAsset->HitSound)
+				{
+					UGameplayStatics::PlaySoundAtLocation(Enemy, Enemy->EnemyDataAsset->HitSound, Enemy->GetActorLocation());
+				}
+
 				if (UWorld* World = Enemy->GetWorld())
 				{
 					if (UCombatFeedbackSubsystem* Feedback = World->GetSubsystem<UCombatFeedbackSubsystem>())

@@ -12,8 +12,13 @@
 #include "GameAbilities/WuWa_AttributeSetBase.h"
 #include "GameplayTags/WuwaGameplayTags.h"
 #include "BrainComponent.h"
+#include "AIController.h"
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
+#include "Components/CapsuleComponent.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Components/AudioComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "UI/WuwaHUD.h"
 
 AEnemyCharacter::AEnemyCharacter()
@@ -27,6 +32,18 @@ AEnemyCharacter::AEnemyCharacter()
 void AEnemyCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// Let the player's camera boom pass THROUGH enemies. Otherwise getting close (especially to a large
+	// enemy) makes the spring arm's Camera-channel probe hit the enemy capsule and yank the camera inside
+	// the player for a frame. Done in BeginPlay so it sticks even if the BP uses a collision preset.
+	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+	{
+		Capsule->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+	}
+	if (USkeletalMeshComponent* MeshComp = GetMesh())
+	{
+		MeshComp->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+	}
 
 	if (AbilitySystemComponent)
 	{
@@ -65,12 +82,32 @@ void AEnemyCharacter::BeginPlay()
 				HUD->ShowBossBar(this);
 			}
 		}
+
+		// start the boss battle music (2D, loops via the asset). Kept as a component so death can fade it.
+		if (EnemyDataAsset->BattleMusic)
+		{
+			BattleMusicComp = UGameplayStatics::SpawnSound2D(this, EnemyDataAsset->BattleMusic);
+		}
+	}
+
+	// spawn intro: play montage + voice and hold the AI until it finishes (bosses or regular enemies)
+	if (EnemyDataAsset && EnemyDataAsset->IntroMontage)
+	{
+		PlayIntro();
 	}
 }
 
 void AEnemyCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	// during an attack wind-up, keep turning toward the player so the swing / lunge aims at them instead of
+	// committing to wherever the enemy happened to face when the montage started. GA_EnemyAttack turns this
+	// off at the strike, so the actual hit is committed (and thus dodgeable).
+	if (bAttackTracking && !bIsGroggy)
+	{
+		FacePlayerYaw(DeltaTime);
+	}
 
 	// groggy only refills WHILE staggered (not during normal combat, and not during the get-up phase).
 	// GroggyRecoverTime = seconds for the full 0 -> max recovery.
@@ -89,6 +126,163 @@ void AEnemyCharacter::Tick(float DeltaTime)
 	{
 		ExitGroggy(); // fully recovered
 	}
+}
+
+bool AEnemyCharacter::TryDodge()
+{
+	// can't dodge while dead / staggered / already mid-dodge, or if no dodge is configured
+	if (bIsDead || bIsGroggy || bIsDodging || !EnemyDataAsset)
+	{
+		return false;
+	}
+	if (!EnemyDataAsset->DodgeMontage || EnemyDataAsset->DodgeChance <= 0.f)
+	{
+		return false;
+	}
+
+	// roll the chance (FRand is [0,1)) - miss -> the hit connects normally
+	if (FMath::FRand() > EnemyDataAsset->DodgeChance)
+	{
+		return false;
+	}
+
+	USkeletalMeshComponent* MeshComp = GetMesh();
+	UAnimInstance* Anim = MeshComp ? MeshComp->GetAnimInstance() : nullptr;
+	if (!Anim)
+	{
+		return false;
+	}
+
+	// play the backstep. If it fails to play, let the hit connect (don't swallow damage for nothing).
+	const float PlayLen = Anim->Montage_Play(EnemyDataAsset->DodgeMontage);
+	if (PlayLen <= 0.f)
+	{
+		return false;
+	}
+
+	bIsDodging = true;
+
+	FOnMontageEnded EndDelegate;
+	EndDelegate.BindUObject(this, &AEnemyCharacter::OnDodgeMontageEnded);
+	Anim->Montage_SetEndDelegate(EndDelegate, EnemyDataAsset->DodgeMontage);
+
+	return true;
+}
+
+void AEnemyCharacter::OnDodgeMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	bIsDodging = false;
+}
+
+void AEnemyCharacter::PlayIntro()
+{
+	USkeletalMeshComponent* MeshComp = GetMesh();
+	UAnimInstance* Anim = MeshComp ? MeshComp->GetAnimInstance() : nullptr;
+	if (!Anim || !EnemyDataAsset || !EnemyDataAsset->IntroMontage)
+	{
+		return;
+	}
+
+	// turn to face the player so the intro is aimed at them (not at wherever the enemy was placed)
+	if (APawn* Player = UGameplayStatics::GetPlayerPawn(this, 0))
+	{
+		FVector ToPlayer = Player->GetActorLocation() - GetActorLocation();
+		ToPlayer.Z = 0.f;
+		if (!ToPlayer.IsNearlyZero())
+		{
+			FRotator Face = ToPlayer.Rotation();
+			Face.Pitch = 0.f;
+			Face.Roll = 0.f;
+			SetActorRotation(Face);
+		}
+	}
+
+	const float PlayLen = Anim->Montage_Play(EnemyDataAsset->IntroMontage);
+	if (PlayLen <= 0.f)
+	{
+		return;   // couldn't play -> don't gate combat on an intro that never runs
+	}
+
+	bIntroPlaying = true;
+
+	// pause the AI now if we're already possessed (placed enemies). If we're possessed later, the
+	// controller's OnPossess pauses via IsPlayingIntro() instead - so combat is held either way.
+	if (AAIController* AI = Cast<AAIController>(GetController()))
+	{
+		if (AI->GetBrainComponent())
+		{
+			AI->GetBrainComponent()->PauseLogic(TEXT("Intro"));
+		}
+	}
+
+	// intro voice line
+	if (EnemyDataAsset->IntroVoice)
+	{
+		UGameplayStatics::SpawnSoundAttached(EnemyDataAsset->IntroVoice, MeshComp);
+	}
+
+	FOnMontageEnded EndDelegate;
+	EndDelegate.BindUObject(this, &AEnemyCharacter::OnIntroMontageEnded);
+	Anim->Montage_SetEndDelegate(EndDelegate, EnemyDataAsset->IntroMontage);
+}
+
+void AEnemyCharacter::OnIntroMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	bIntroPlaying = false;
+
+	// intro done -> let the AI start fighting
+	if (AAIController* AI = Cast<AAIController>(GetController()))
+	{
+		if (AI->GetBrainComponent())
+		{
+			AI->GetBrainComponent()->ResumeLogic(TEXT("Intro"));
+		}
+	}
+}
+
+void AEnemyCharacter::PlayHitReact()
+{
+	// only flinch some of the time - reacting to every hit looks spammy and causes stunlock.
+	// 70% of hits the enemy "poises" through (keeps its attack), 30% it flinches.
+	if (EnemyDataAsset && FMath::FRand() > EnemyDataAsset->HitReactChance)
+	{
+		return;
+	}
+
+	Super::PlayHitReact();
+}
+
+void AEnemyCharacter::FacePlayerYaw(float DeltaTime)
+{
+	APawn* Player = UGameplayStatics::GetPlayerPawn(this, 0);
+	if (!Player)
+	{
+		return;
+	}
+
+	FVector ToPlayer = Player->GetActorLocation() - GetActorLocation();
+	ToPlayer.Z = 0.f;
+	if (ToPlayer.IsNearlyZero())
+	{
+		return;
+	}
+
+	const FRotator CurrentRot = GetActorRotation();
+	FRotator GoalRot = ToPlayer.Rotation();
+	GoalRot.Pitch = CurrentRot.Pitch;   // yaw only - keep the enemy upright
+	GoalRot.Roll  = CurrentRot.Roll;
+
+	// already facing closely enough -> don't jitter
+	if (FMath::Abs(FMath::FindDeltaAngleDegrees(CurrentRot.Yaw, GoalRot.Yaw)) <= AttackTrackDeadzoneDeg)
+	{
+		return;
+	}
+
+	const FRotator NewRot = (AttackTurnSpeed > 0.f)
+		? FMath::RInterpTo(CurrentRot, GoalRot, DeltaTime, AttackTurnSpeed)
+		: GoalRot;
+
+	SetActorRotation(NewRot);
 }
 
 void AEnemyCharacter::ApplyGroggyDamage(float Amount)
@@ -322,6 +516,14 @@ void AEnemyCharacter::HandleDeath()
 			{
 				HUD->HideBossBar();
 			}
+		}
+
+		// fade the battle music out with the boss. The audio component lives independently of this actor,
+		// so it keeps fading even after Destroy() below.
+		if (BattleMusicComp)
+		{
+			BattleMusicComp->FadeOut(2.f, 0.f);
+			BattleMusicComp = nullptr;
 		}
 	}
 

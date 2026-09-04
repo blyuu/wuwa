@@ -166,6 +166,14 @@ void UGA_BaseAttack::OnHitEvent(FGameplayEventData Payload)
 		if (HitActor)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("[Melee] Hit confirmed: %s"), *HitActor->GetName());
+
+			// the enemy may backstep out of this hit (chance from its data asset). If it dodges,
+			// nothing lands - no damage, groggy, or gauge gain.
+			if (AEnemyCharacter* DodgeEnemy = Cast<AEnemyCharacter>(HitActor))
+			{
+				if (DodgeEnemy->TryDodge()) return;
+			}
+
 			UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor);
 			
 			FGameplayTag BaseAttackTag = GetAssetTags().First();
@@ -253,7 +261,7 @@ void UGA_BaseAttack::PerformRangedTrace()
 		UEngineTypes::ConvertToTraceType(ECC_Pawn),
 		false,
 		ActorsToIgnore,
-		EDrawDebugTrace::ForDuration,
+		EDrawDebugTrace::None,
 		HitResult,
 		true
 	);

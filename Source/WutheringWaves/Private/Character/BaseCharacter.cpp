@@ -8,6 +8,7 @@
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 
 ABaseCharacter::ABaseCharacter()
@@ -130,6 +131,12 @@ UAnimMontage* ABaseCharacter::GetHitReactMontage() const
 	return HitReactMontage;
 }
 
+const TArray<TObjectPtr<USoundBase>>& ABaseCharacter::GetHitVoiceLines() const
+{
+	// base: the BP-set fallback (enemies). Playable characters override this to read their data asset.
+	return HitVoiceLines;
+}
+
 void ABaseCharacter::PlayHitReact()
 {
 	if (bIsDead)
@@ -137,19 +144,26 @@ void ABaseCharacter::PlayHitReact()
 		return;
 	}
 
-	UAnimMontage* Montage = GetHitReactMontage();
-	if (!Montage)
+	// flinch montage - naturally interrupts an in-progress attack montage (getting hit breaks your swing)
+	if (UAnimMontage* Montage = GetHitReactMontage())
 	{
-		return;
+		if (USkeletalMeshComponent* MeshComp = GetMesh())
+		{
+			if (UAnimInstance* Anim = MeshComp->GetAnimInstance())
+			{
+				Anim->Montage_Play(Montage);
+			}
+		}
 	}
 
-	// play the flinch on the mesh. This naturally interrupts an in-progress attack montage
-	// (the ability's OnInterrupted fires and ends it) - i.e. getting hit breaks your swing.
-	if (USkeletalMeshComponent* MeshComp = GetMesh())
+	// hit voice - a random line, played even if there's no flinch montage
+	const TArray<TObjectPtr<USoundBase>>& Voices = GetHitVoiceLines();
+	if (Voices.Num() > 0)
 	{
-		if (UAnimInstance* Anim = MeshComp->GetAnimInstance())
+		const int32 Index = FMath::RandRange(0, Voices.Num() - 1);
+		if (USoundBase* Voice = Voices[Index])
 		{
-			Anim->Montage_Play(Montage);
+			UGameplayStatics::SpawnSoundAttached(Voice, GetMesh());
 		}
 	}
 }

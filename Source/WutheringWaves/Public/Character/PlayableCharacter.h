@@ -76,6 +76,9 @@ public:
 	// playable characters keep everything data-driven: the flinch montage comes from the data asset
 	virtual class UAnimMontage* GetHitReactMontage() const override;
 
+	// hit voice lines come from the data asset too
+	virtual const TArray<TObjectPtr<class USoundBase>>& GetHitVoiceLines() const override;
+
 	//========================================================================
 	// Auto-target ("soft lock"). Attacks / skills / ultimate call FaceTargetForAttack
 	// on activation so the character turns toward (and optionally slides to) the enemy
@@ -96,6 +99,9 @@ public:
 	AEnemyCharacter* FaceTargetForAttack();
 
 private:
+	// guards one-time attribute init in PossessedBy so a team swap doesn't reset HP/gauges to full
+	bool bAttributesInitialized = false;
+
 	// running blend state for the turn / step-in kicked off by FaceTargetForAttack
 	bool bTargetAssistActive = false;
 	float TargetAssistElapsed = 0.f;

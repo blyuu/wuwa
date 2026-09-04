@@ -31,6 +31,10 @@ struct FEnemySkillData
 	UPROPERTY(EditDefaultsOnly)
 	int32 MinPhase = 1;
 
+	// voice lines for this attack; one is picked at random and played when the attack fires (empty = silent)
+	UPROPERTY(EditDefaultsOnly)
+	TArray<TObjectPtr<class USoundBase>> VoiceLines;
+
 };
 
 UCLASS()
@@ -95,6 +99,38 @@ public:
 	float MoveSpeed = 300.f;
 
 	//========================================================================
+	// Dodge - chance to backstep out of the player's hit
+	//========================================================================
+
+	// chance [0..1] to dodge an incoming player hit (0.1 = 10%). Rolled once per hit. 0 = never dodges.
+	UPROPERTY(EditDefaultsOnly, Category = "Dodge", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float DodgeChance = 0.1f;
+
+	// backstep / sidestep montage played on a successful dodge (use root motion for the movement)
+	UPROPERTY(EditDefaultsOnly, Category = "Dodge")
+	TObjectPtr<class UAnimMontage> DodgeMontage;
+
+	// impact sound played when the player lands a hit on this enemy (at the enemy - no AnimNotify needed)
+	UPROPERTY(EditDefaultsOnly, Category = "Feedback")
+	TObjectPtr<class USoundBase> HitSound;
+
+	// chance [0..1] to play the flinch (hit-react) when hit. 0.3 = ~30% of hits (avoids constant stunlock)
+	UPROPERTY(EditDefaultsOnly, Category = "Feedback", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float HitReactChance = 0.3f;
+
+	//========================================================================
+	// Spawn intro - plays once when the enemy appears, before combat starts
+	//========================================================================
+
+	// intro montage played on spawn; AI/combat is held until it finishes (empty = no intro, fight immediately)
+	UPROPERTY(EditDefaultsOnly, Category = "Intro")
+	TObjectPtr<class UAnimMontage> IntroMontage;
+
+	// voice line played alongside the intro montage
+	UPROPERTY(EditDefaultsOnly, Category = "Intro")
+	TObjectPtr<class USoundBase> IntroVoice;
+
+	//========================================================================
 	// Boss HUD (only used when bIsBoss is true)
 	//========================================================================
 
@@ -105,6 +141,11 @@ public:
 	// name shown above the boss health bar
 	UPROPERTY(EditDefaultsOnly, Category = "Boss")
 	FText DisplayName;
+
+	// looping battle music, played while this boss is alive and faded out on death.
+	// set the sound asset itself to loop (SoundWave "Looping" or a looping Sound Cue).
+	UPROPERTY(EditDefaultsOnly, Category = "Boss")
+	TObjectPtr<class USoundBase> BattleMusic;
 
 	// level shown next to the boss name
 	UPROPERTY(EditDefaultsOnly, Category = "Boss")

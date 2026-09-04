@@ -53,6 +53,9 @@ void UGA_EnemyAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, c
 		}
 	}
 
+	// keep aiming at the player through the wind-up (turned off at the strike in OnHitEvent / on end)
+	Enemy->SetAttackTracking(true);
+
 	UAbilityTask_PlayMontageAndWait* PlayAttackMontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, NAME_None, CurrentMontage);
 	PlayAttackMontageTask->OnBlendOut.AddDynamic(this, &UGA_EnemyAttack::EndMontage);
 	PlayAttackMontageTask->OnCancelled.AddDynamic(this, &UGA_EnemyAttack::EndMontage);
@@ -66,12 +69,42 @@ void UGA_EnemyAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, c
 		this, EventTags::Event_EnemyAttack_Hit);
 	WaitHit->EventReceived.AddDynamic(this, &UGA_EnemyAttack::OnHitEvent);
 	WaitHit->ReadyForActivation();
+
+	// voice line event - an AnimNotify (Event.Skill.Voice) on the montage fires this -> plays one random line
+	UAbilityTask_WaitGameplayEvent* WaitVoice = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+		this, EventTags::Event_Skill_Voice);
+	WaitVoice->EventReceived.AddDynamic(this, &UGA_EnemyAttack::OnVoiceEvent);
+	WaitVoice->ReadyForActivation();
+}
+
+void UGA_EnemyAttack::OnVoiceEvent(FGameplayEventData Payload)
+{
+	PlaySkillVoice();
+}
+
+void UGA_EnemyAttack::PlaySkillVoice()
+{
+	AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(GetCurrentActorInfo()->AvatarActor);
+	if (!Enemy || !Enemy->EnemyDataAsset) return;
+
+	// pick a random line for the attack type that PerformAttack chose (CurrentSkillTag)
+	const FEnemySkillData* SkillData = Enemy->EnemyDataAsset->Skills.Find(Enemy->CurrentSkillTag);
+	if (!SkillData || SkillData->VoiceLines.Num() == 0) return;
+
+	const int32 Index = FMath::RandRange(0, SkillData->VoiceLines.Num() - 1);
+	if (USoundBase* Voice = SkillData->VoiceLines[Index])
+	{
+		UGameplayStatics::SpawnSoundAttached(Voice, Enemy->GetMesh());
+	}
 }
 
 void UGA_EnemyAttack::OnHitEvent(FGameplayEventData Payload)
 {
 	AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(GetCurrentActorInfo()->AvatarActor);
 	if (!Enemy || !Enemy->EnemyDataAsset) return;
+
+	// the strike has landed -> stop aiming so the hit is committed (player can now dodge it)
+	Enemy->SetAttackTracking(false);
 
 	// look up GE/multiplier by the attack type tag PerformAttack picked
 	const FEnemySkillData* SkillData = Enemy->EnemyDataAsset->Skills.Find(Enemy->CurrentSkillTag);
@@ -101,6 +134,15 @@ void UGA_EnemyAttack::OnHitEvent(FGameplayEventData Payload)
 void UGA_EnemyAttack::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+
+	// safety: make sure aiming is off when the attack ends (whiff, cancel, groggy, etc.)
+	if (ActorInfo)
+	{
+		if (AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(ActorInfo->AvatarActor))
+		{
+			Enemy->SetAttackTracking(false);
+		}
+	}
 
 	CurrentMontage = nullptr;
 }

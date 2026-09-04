@@ -146,6 +146,10 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<class UAnimMontage> HitReactMontage;
 
+	// hit voice lines - one is played at random when this character takes damage (empty = silent)
+	UPROPERTY(EditDefaultsOnly)
+	TArray<TObjectPtr<class USoundBase>> HitVoiceLines;
+
 	// The three dodge montages for this character (perfect / forward / back).
 	UPROPERTY(EditDefaultsOnly, Category = "Dodge")
 	FDodgeData Dodge;
