@@ -70,6 +70,13 @@ private:
 	void FinishChargedSwap();   // fired after the outro delay: swap + trigger the incoming's GA_Intro
 	class AEnemyCharacter* FindNearestEnemy(const FVector& From) const;
 
+	// plays the incoming character's swap voice, cutting any swap voice still playing so lines don't overlap
+	void PlaySwapVoice(APlayableCharacter* Char);
+
+	// the swap voice currently playing (kept so the next swap can stop it)
+	UPROPERTY()
+	TObjectPtr<class UAudioComponent> CurrentVoiceComp;
+
 	FTimerHandle ChargedSwapTimer;
 	int32 PendingSwapIndex = INDEX_NONE;
 

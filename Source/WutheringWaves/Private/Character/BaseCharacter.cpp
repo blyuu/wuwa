@@ -99,9 +99,13 @@ void ABaseCharacter::InitializeAttributes(float InMaxHp)
 {
 	if (!AttributeSet)
 	{
+		// silent-return used to hide this: level (data-asset value) still shows, but HP never initializes,
+		// so a BP missing its AttributeSet looks like "HP won't apply" while everything else works.
+		UE_LOG(LogTemp, Error, TEXT("[InitializeAttributes] %s has no AttributeSet - HP will NOT be applied"),
+			*GetName());
 		return;
 	}
-	
+
 	AttributeSet->InitMaxHp(InMaxHp);
 	AttributeSet->InitHp(InMaxHp);
 }

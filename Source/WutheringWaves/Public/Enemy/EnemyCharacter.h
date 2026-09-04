@@ -72,6 +72,11 @@ public:
 	UPROPERTY()
 	TObjectPtr<class UAnimMontage> CurrentMontage;
 
+	// the last attack voice line that played. GA_EnemyAttack reads/updates this so the next random pick
+	// avoids repeating the same line back-to-back (kept on the actor so it persists across attacks).
+	UPROPERTY()
+	TObjectPtr<class USoundBase> LastAttackVoice;
+
 protected:
 	virtual void HandleDeath() override;
 

@@ -151,6 +151,10 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<class UAnimMontage> IntroMontage;
 
+	// voice line played when this character is swapped in. Any swap voice still playing is cut first (no overlap).
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<class USoundBase> SwapVoice;
+
 	// flinch / hit-react montage played when this character takes damage but survives
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<class UAnimMontage> HitReactMontage;

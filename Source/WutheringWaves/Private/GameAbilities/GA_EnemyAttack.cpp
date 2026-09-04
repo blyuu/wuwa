@@ -91,9 +91,26 @@ void UGA_EnemyAttack::PlaySkillVoice()
 	const FEnemySkillData* SkillData = Enemy->EnemyDataAsset->Skills.Find(Enemy->CurrentSkillTag);
 	if (!SkillData || SkillData->VoiceLines.Num() == 0) return;
 
-	const int32 Index = FMath::RandRange(0, SkillData->VoiceLines.Num() - 1);
-	if (USoundBase* Voice = SkillData->VoiceLines[Index])
+	const TArray<TObjectPtr<USoundBase>>& Lines = SkillData->VoiceLines;
+	const int32 Num = Lines.Num();
+
+	// random, but don't repeat the line that just played. Find where the last one sits in THIS list; if it's
+	// here, roll among the other N-1 entries and skip over it (uniform, no retry loop). One line -> no choice.
+	int32 Index;
+	const int32 LastIdx = Lines.IndexOfByKey(Enemy->LastAttackVoice);
+	if (Num == 1 || LastIdx == INDEX_NONE)
 	{
+		Index = FMath::RandRange(0, Num - 1);
+	}
+	else
+	{
+		Index = FMath::RandRange(0, Num - 2);
+		if (Index >= LastIdx) ++Index;
+	}
+
+	if (USoundBase* Voice = Lines[Index])
+	{
+		Enemy->LastAttackVoice = Voice;   // remember it so the next attack avoids repeating it
 		UGameplayStatics::SpawnSoundAttached(Voice, Enemy->GetMesh());
 	}
 }

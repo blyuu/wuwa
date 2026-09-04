@@ -24,7 +24,7 @@ APlayableCharacter::APlayableCharacter()
 	SpringArmComponent = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 
 	SpringArmComponent->SetupAttachment(RootComponent);
-	SpringArmComponent->TargetArmLength = 300.0f;
+	SpringArmComponent->TargetArmLength = 400.0f;
 
 	CameraComponent->SetupAttachment(SpringArmComponent);
 
@@ -110,8 +110,24 @@ void APlayableCharacter::PossessedBy(AController* NewController)
 	// Character Base : InitAbilityActorInfo + GiveAbilites 
 	Super::PossessedBy(NewController);
 	
+	// no data asset -> HP/level/skills/etc. can't be applied. Warn loudly instead of silently using defaults,
+	// since "one character has wrong HP and level" almost always means its CharacterData slot is empty.
+	if (!CharacterData)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[PlayableCharacter] %s has no CharacterData set - HP/level/skills will use defaults"),
+			*GetName());
+	}
+
 	if (CharacterData)
 	{
+		// warn if the data asset is there but the HP field was left at (or below) zero - the character would
+		// spawn dead / with a broken bar, and it looks identical to "HP not applied"
+		if (CharacterData->MaxHp <= 0.f)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[PlayableCharacter] %s CharacterData MaxHp is %.1f (<= 0)"),
+				*GetName(), CharacterData->MaxHp);
+		}
+
 		// Initialize attributes only ONCE per character. Re-possessing on a team swap must NOT reset
 		// HP / gauges back to full, otherwise damage taken before the swap is wiped on swap-back.
 		if (!bAttributesInitialized)

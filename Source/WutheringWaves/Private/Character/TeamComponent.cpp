@@ -11,6 +11,10 @@
 #include "GameAbilities/WuWa_AttributeSetBase.h"
 #include "GameplayTags/WuwaGameplayTags.h"
 #include "Character/WeaponClass.h"
+#include "DataAsset/CharacterDataAsset.h"
+#include "Components/AudioComponent.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Animation/AnimInstance.h"
 #include "Enemy/EnemyCharacter.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
@@ -184,6 +188,24 @@ void UTeamComponent::DoSwap(int32 Index)
 	{
 		HUD->OnPlayerCharacterChanged(Incoming);
 	}
+
+	// incoming character's swap line (cuts any swap voice still playing so they don't overlap)
+	PlaySwapVoice(Incoming);
+}
+
+void UTeamComponent::PlaySwapVoice(APlayableCharacter* Char)
+{
+	// stop the previous swap voice if it's still playing
+	if (CurrentVoiceComp)
+	{
+		CurrentVoiceComp->Stop();
+		CurrentVoiceComp = nullptr;
+	}
+
+	if (Char && Char->CharacterData && Char->CharacterData->SwapVoice)
+	{
+		CurrentVoiceComp = UGameplayStatics::SpawnSoundAttached(Char->CharacterData->SwapVoice, Char->GetMesh());
+	}
 }
 
 void UTeamComponent::FinishChargedSwap()
@@ -235,6 +257,16 @@ void UTeamComponent::DeActivateCharacter(APlayableCharacter* Char)
 	Char->SetActorHiddenInGame(true);
 	Char->SetActorEnableCollision(false);
 	Char->SetActorTickEnabled(false);
+
+	// Stop any montage still playing (e.g. the charged-swap outro attack). Otherwise its weapon-draw notify
+	// can fire AFTER we hide the weapon below and re-show it - that's the weapon that "lingers" in the air.
+	if (USkeletalMeshComponent* Mesh = Char->GetMesh())
+	{
+		if (UAnimInstance* Anim = Mesh->GetAnimInstance())
+		{
+			Anim->Montage_Stop(0.f);
+		}
+	}
 
 	// The weapon is a separate actor, so hiding the character doesn't hide it. Sheathe it explicitly so a
 	// benched character (whose weapon may have been left drawn from an attack) doesn't flash it on swap-in.
