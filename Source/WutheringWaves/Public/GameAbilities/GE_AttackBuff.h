@@ -11,7 +11,7 @@
  */
 UCLASS()
 class WUTHERINGWAVES_API UGE_AttackBuff : public UGameplayEffect
-{z
+{
 	GENERATED_BODY()
 
 public:
