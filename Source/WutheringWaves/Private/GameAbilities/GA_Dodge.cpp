@@ -53,6 +53,7 @@ void UGA_Dodge::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
 	if (IsEnemyAttackingNearby())
 	{
 		CurrentMontage = Dodge.PerfectMontage;
+		Character->PlayDodgeSlowMo();   // WuWa-style brief slow-motion on a perfect dodge
 	}
 	else if (bForwardInput)
 	{

@@ -5,6 +5,14 @@
 
 #include "AbilitySystemComponent.h"
 #include "GameAbilities/WuWa_AttributeSetBase.h"
+#include "GameplayTags/WuwaGameplayTags.h"
+
+UGA_Liberation::UGA_Liberation()
+{
+	// the whole ultimate is invulnerable (cinematic cast): while active the owner has State.Invulnerable,
+	// so incoming damage is rejected and the hit-react can't interrupt the montage. GAS removes it on end.
+	ActivationOwnedTags.AddTag(StateTags::State_Invulnerable);
+}
 
 bool UGA_Liberation::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
