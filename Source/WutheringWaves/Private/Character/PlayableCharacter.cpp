@@ -17,7 +17,6 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
-#include "MotionWarpingComponent.h"
 
 APlayableCharacter::APlayableCharacter()
 {
@@ -31,8 +30,6 @@ APlayableCharacter::APlayableCharacter()
 
 	SpringArmComponent->bUsePawnControlRotation = true;
 	CameraComponent->bUsePawnControlRotation = false;
-
-	MotionWarping = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarping"));
 
 	InputMappingContext = nullptr;
 }
@@ -477,15 +474,6 @@ AEnemyCharacter* APlayableCharacter::FaceTargetForAttack()
 	TargetAssistElapsed = 0.f;
 	TargetAssistBlendTime = FMath::Max(Cfg.BlendTime, 0.01f);
 	bTargetAssistActive = true;
-
-	// Motion Warping: mark the attack target so an attack montage with a Motion Warping window ("AttackTarget")
-	// closes the gap DURING the swing and the weapon sweep actually connects. Stop short (StopDistance) so we
-	// don't overlap the enemy. For montages that use this, turn TargetAssist.bStepIn off to avoid double-moving.
-	if (MotionWarping)
-	{
-		const FVector WarpLoc = Target->GetActorLocation() - Dir * Cfg.StopDistance;
-		MotionWarping->AddOrUpdateWarpTargetFromLocationAndRotation(FName("AttackTarget"), WarpLoc, TargetAssistGoalRot);
-	}
 
 	return Target;
 }

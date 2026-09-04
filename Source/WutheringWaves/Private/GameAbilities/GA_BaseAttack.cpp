@@ -50,6 +50,13 @@ void UGA_BaseAttack::AdvanceCombo()
 	if (CurrentMontage->GetSectionIndex(NextSection) != INDEX_NONE)
 	{
 		AnimInstance->Montage_JumpToSection(NextSection, CurrentMontage);
+
+		// re-aim at the target for THIS hit too. ActivateAbility only faces on the first attack, so without
+		// this the combo keeps the first hit's direction and just lunges straight forward past a moved enemy.
+		if (APlayableCharacter* BaseCharacter = Cast<APlayableCharacter>(GetCurrentActorInfo()->AvatarActor.Get()))
+		{
+			BaseCharacter->FaceTargetForAttack();
+		}
 	}
 	else
 	{

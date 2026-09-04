@@ -35,11 +35,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TObjectPtr<class USpringArmComponent> SpringArmComponent;
 
-	// warps an attack montage toward the locked target (a "Motion Warping" notify on the attack montage,
-	// warp target name "AttackTarget") so the swing closes the gap and the weapon sweep actually connects
-	UPROPERTY(VisibleAnywhere, Category = "Combat")
-	TObjectPtr<class UMotionWarpingComponent> MotionWarping;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TObjectPtr<class UInputMappingContext> InputMappingContext;
 

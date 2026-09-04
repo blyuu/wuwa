@@ -103,8 +103,8 @@ void UGA_EnemyAttack::OnHitEvent(FGameplayEventData Payload)
 	AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(GetCurrentActorInfo()->AvatarActor);
 	if (!Enemy || !Enemy->EnemyDataAsset) return;
 
-	// the strike has landed -> stop aiming so the hit is committed (player can now dodge it)
-	Enemy->SetAttackTracking(false);
+	// keep aiming through the WHOLE attack (not just up to the first hit), so a multi-hit attack follows the
+	// player on every swing instead of lunging straight after the first. Tracking stops in EndAbility.
 
 	// look up GE/multiplier by the attack type tag PerformAttack picked
 	const FEnemySkillData* SkillData = Enemy->EnemyDataAsset->Skills.Find(Enemy->CurrentSkillTag);

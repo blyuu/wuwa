@@ -245,6 +245,12 @@ void AEnemyCharacter::OnIntroMontageEnded(UAnimMontage* Montage, bool bInterrupt
 
 void AEnemyCharacter::PlayHitReact()
 {
+	// never flinch while staggered / getting up - it would cut the groggy loop or the get-up montage
+	if (bIsGroggy || bIsRecovering)
+	{
+		return;
+	}
+
 	// only flinch some of the time - reacting to every hit looks spammy and causes stunlock.
 	// 70% of hits the enemy "poises" through (keeps its attack), 30% it flinches.
 	if (EnemyDataAsset && FMath::FRand() > EnemyDataAsset->HitReactChance)
@@ -301,19 +307,10 @@ void AEnemyCharacter::FacePlayerYaw(float DeltaTime)
 
 	// Motion Warping: keep "AttackTarget" pointed at the player each frame, so a root-motion attack (with a
 	// Motion Warping notify on its montage) HOMES toward the player during the wind-up instead of going straight.
-	// Warp to a point that stops SHORT of the player (AttackStopDistance) so the swing lands in reach; when
-	// already inside that distance, aim the target at ourselves so we don't warp forward/backward oddly.
 	if (MotionWarping)
 	{
-		const float Dist = ToPlayer.Size();
-		FVector WarpLoc = GetActorLocation();
-		if (Dist > AttackStopDistance)
-		{
-			const FVector Dir = ToPlayer / Dist;
-			WarpLoc = Player->GetActorLocation() - Dir * AttackStopDistance;
-		}
 		MotionWarping->AddOrUpdateWarpTargetFromLocationAndRotation(
-			FName("AttackTarget"), WarpLoc, FRotator(0.f, GoalRot.Yaw, 0.f));
+			FName("AttackTarget"), Player->GetActorLocation(), FRotator(0.f, GoalRot.Yaw, 0.f));
 	}
 
 	// non-root-motion attacks: also turn manually (harmless when Motion Warping is driving the rotation)

@@ -11,6 +11,7 @@
 #include "Enemy/EnemyCharacter.h"
 #include "GameplayTags/WuwaGameplayTags.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Kismet/GameplayStatics.h"
 
 UGA_Dodge::UGA_Dodge()
 {
@@ -50,10 +51,12 @@ void UGA_Dodge::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
 	}
 
 	// --- Decide the situation: perfect > forward > back ---
+	bool bPerfectDodge = false;
 	if (IsEnemyAttackingNearby())
 	{
 		CurrentMontage = Dodge.PerfectMontage;
 		Character->PlayDodgeSlowMo();   // WuWa-style brief slow-motion on a perfect dodge
+		bPerfectDodge = true;
 	}
 	else if (bForwardInput)
 	{
@@ -74,6 +77,12 @@ void UGA_Dodge::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
+	}
+
+	// dodge whoosh (perfect dodge uses its own sound if one is set, else the normal dodge sound)
+	if (USoundBase* DodgeSFX = (bPerfectDodge && Dodge.PerfectDodgeSound) ? Dodge.PerfectDodgeSound.Get() : Dodge.DodgeSound.Get())
+	{
+		UGameplayStatics::SpawnSoundAttached(DodgeSFX, Character->GetMesh());
 	}
 
 	UAbilityTask_PlayMontageAndWait* PlayDodge = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, NAME_None, CurrentMontage);

@@ -114,6 +114,14 @@ struct FDodgeData
 	// Played with no movement input: dash backward.
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<class UAnimMontage> BackMontage;
+
+	// whoosh played on any dodge
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<class USoundBase> DodgeSound;
+
+	// distinct sound for a perfect dodge (falls back to DodgeSound if left empty)
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<class USoundBase> PerfectDodgeSound;
 };
 
 UCLASS()

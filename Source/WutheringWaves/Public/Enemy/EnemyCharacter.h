@@ -37,11 +37,6 @@ public:
 	UPROPERTY(EditAnywhere, Category = "AI")
 	float AttackTrackDeadzoneDeg = 3.f;
 
-	// Motion Warping stops the attack this far SHORT of the player (so it lands in reach, not inside them).
-	// Within this distance the enemy doesn't warp forward at all (already in range -> just swings).
-	UPROPERTY(EditAnywhere, Category = "AI")
-	float AttackStopDistance = 150.f;
-
 	// called by GA_EnemyAttack: while true, the enemy turns toward the player each Tick (aims the wind-up).
 	// also toggles bOrientRotationToMovement so movement-based rotation can't fight our manual facing.
 	void SetAttackTracking(bool bEnable);
