@@ -10,6 +10,7 @@
 #include "GameplayEffect.h"
 #include "GameAbilities/WuWa_AttributeSetBase.h"
 #include "GameplayTags/WuwaGameplayTags.h"
+#include "Character/WeaponClass.h"
 #include "Enemy/EnemyCharacter.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
@@ -234,6 +235,13 @@ void UTeamComponent::DeActivateCharacter(APlayableCharacter* Char)
 	Char->SetActorHiddenInGame(true);
 	Char->SetActorEnableCollision(false);
 	Char->SetActorTickEnabled(false);
+
+	// The weapon is a separate actor, so hiding the character doesn't hide it. Sheathe it explicitly so a
+	// benched character (whose weapon may have been left drawn from an attack) doesn't flash it on swap-in.
+	if (Char->CurrentWeapon && !Char->bAlwaysShowWeapon)
+	{
+		Char->CurrentWeapon->HideWeapon();
+	}
 
 	if (UCharacterMovementComponent* Movement = Char->GetCharacterMovement())
 	{
