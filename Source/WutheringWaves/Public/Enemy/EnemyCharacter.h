@@ -24,6 +24,11 @@ public:
 	UPROPERTY(EditAnywhere, Category = "AI")
 	TObjectPtr<class UBehaviorTree> BehaviorTree;
 
+	// warps root-motion attacks toward the player (a "Motion Warping" notify on the attack montage,
+	// warp target name "AttackTarget", consumes the target we update each frame during the wind-up)
+	UPROPERTY(VisibleAnywhere, Category = "AI")
+	TObjectPtr<class UMotionWarpingComponent> MotionWarping;
+
 	// attack aim: how fast the enemy turns toward the player during an attack wind-up (RInterp speed; 0 = instant)
 	UPROPERTY(EditAnywhere, Category = "AI")
 	float AttackTurnSpeed = 6.f;
@@ -32,8 +37,14 @@ public:
 	UPROPERTY(EditAnywhere, Category = "AI")
 	float AttackTrackDeadzoneDeg = 3.f;
 
-	// called by GA_EnemyAttack: while true, the enemy turns toward the player each Tick (aims the wind-up)
-	void SetAttackTracking(bool bEnable) { bAttackTracking = bEnable; }
+	// Motion Warping stops the attack this far SHORT of the player (so it lands in reach, not inside them).
+	// Within this distance the enemy doesn't warp forward at all (already in range -> just swings).
+	UPROPERTY(EditAnywhere, Category = "AI")
+	float AttackStopDistance = 150.f;
+
+	// called by GA_EnemyAttack: while true, the enemy turns toward the player each Tick (aims the wind-up).
+	// also toggles bOrientRotationToMovement so movement-based rotation can't fight our manual facing.
+	void SetAttackTracking(bool bEnable);
 
 	// rolls the data-asset dodge chance when the player lands a hit. On success plays the backstep montage
 	// and returns true (the attacker then skips damage). false = the hit connects normally.
@@ -91,6 +102,9 @@ protected:
 
 	// true while an attack is aiming at the player (set by GA_EnemyAttack around the wind-up)
 	bool bAttackTracking = false;
+
+	// bOrientRotationToMovement value saved before tracking, restored after (so we don't clobber it)
+	bool bSavedOrientToMovement = true;
 
 	// rotate yaw toward the current player pawn (used each Tick during attack tracking)
 	void FacePlayerYaw(float DeltaTime);

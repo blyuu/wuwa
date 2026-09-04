@@ -35,6 +35,11 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TObjectPtr<class USpringArmComponent> SpringArmComponent;
 
+	// warps an attack montage toward the locked target (a "Motion Warping" notify on the attack montage,
+	// warp target name "AttackTarget") so the swing closes the gap and the weapon sweep actually connects
+	UPROPERTY(VisibleAnywhere, Category = "Combat")
+	TObjectPtr<class UMotionWarpingComponent> MotionWarping;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TObjectPtr<class UInputMappingContext> InputMappingContext;
 
@@ -79,6 +84,24 @@ public:
 	// hit voice lines come from the data asset too
 	virtual const TArray<TObjectPtr<class USoundBase>>& GetHitVoiceLines() const override;
 
+	// brief global slow-motion for a perfect dodge (world slows; player optionally stays fast). Auto-restores.
+	void PlayDodgeSlowMo();
+
+protected:
+	// world time scale during the perfect-dodge slow-mo (0.4 = 40% speed)
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Dodge")
+	float DodgeSlowMoScale = 0.4f;
+
+	// how long the slow-mo lasts, in REAL seconds
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Dodge")
+	float DodgeSlowMoDuration = 0.35f;
+
+	// keep the player near-normal speed while the world slows (WuWa-style reaction advantage)
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Dodge")
+	bool bDodgeSlowMoKeepPlayerFast = true;
+
+public:
+
 	//========================================================================
 	// Auto-target ("soft lock"). Attacks / skills / ultimate call FaceTargetForAttack
 	// on activation so the character turns toward (and optionally slides to) the enemy
@@ -99,6 +122,10 @@ public:
 	AEnemyCharacter* FaceTargetForAttack();
 
 private:
+	// restores time dilation when the perfect-dodge slow-mo ends
+	FTimerHandle SlowMoTimerHandle;
+	void EndDodgeSlowMo();
+
 	// guards one-time attribute init in PossessedBy so a team swap doesn't reset HP/gauges to full
 	bool bAttributesInitialized = false;
 

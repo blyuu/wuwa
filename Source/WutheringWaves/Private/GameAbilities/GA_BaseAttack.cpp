@@ -185,6 +185,8 @@ void UGA_BaseAttack::OnHitEvent(FGameplayEventData Payload)
 				FGameplayEffectContextHandle Context = GetAbilitySystemComponentFromActorInfo()->MakeEffectContext();
 
 				FGameplayEffectSpecHandle Spec = GetAbilitySystemComponentFromActorInfo()->MakeOutgoingSpec(DamageEffectClass, 1.f, Context);
+					// data-driven damage: the number lives in the skill data (Skills[tag].Damage), injected via SetByCaller
+					Spec.Data->SetSetByCallerMagnitude(DataTags::Data_Damage, SkillData.Damage);
 
 				TargetASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
 			}

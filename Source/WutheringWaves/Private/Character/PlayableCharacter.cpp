@@ -16,6 +16,8 @@
 #include "GameAbilities/WuWa_AttributeSetBase.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "TimerManager.h"
+#include "MotionWarpingComponent.h"
 
 APlayableCharacter::APlayableCharacter()
 {
@@ -29,6 +31,8 @@ APlayableCharacter::APlayableCharacter()
 
 	SpringArmComponent->bUsePawnControlRotation = true;
 	CameraComponent->bUsePawnControlRotation = false;
+
+	MotionWarping = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarping"));
 
 	InputMappingContext = nullptr;
 }
@@ -146,6 +150,34 @@ UAnimMontage* APlayableCharacter::GetHitReactMontage() const
 {
 	// data-driven: pull the flinch montage from this character's data asset
 	return CharacterData ? CharacterData->HitReactMontage : nullptr;
+}
+
+void APlayableCharacter::PlayDodgeSlowMo()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	// slow the whole world down
+	UGameplayStatics::SetGlobalTimeDilation(World, DodgeSlowMoScale);
+
+	// optionally counter it on the player so it acts near-normal while the world crawls (reaction advantage)
+	CustomTimeDilation = bDodgeSlowMoKeepPlayerFast ? (1.f / DodgeSlowMoScale) : 1.f;
+
+	// world timers run on DILATED time, so scale the duration to fire after DodgeSlowMoDuration *real* seconds
+	World->GetTimerManager().SetTimer(SlowMoTimerHandle, this, &APlayableCharacter::EndDodgeSlowMo,
+		FMath::Max(DodgeSlowMoDuration * DodgeSlowMoScale, 0.001f), false);
+}
+
+void APlayableCharacter::EndDodgeSlowMo()
+{
+	if (UWorld* World = GetWorld())
+	{
+		UGameplayStatics::SetGlobalTimeDilation(World, 1.f);
+	}
+	CustomTimeDilation = 1.f;
 }
 
 const TArray<TObjectPtr<USoundBase>>& APlayableCharacter::GetHitVoiceLines() const
@@ -445,6 +477,15 @@ AEnemyCharacter* APlayableCharacter::FaceTargetForAttack()
 	TargetAssistElapsed = 0.f;
 	TargetAssistBlendTime = FMath::Max(Cfg.BlendTime, 0.01f);
 	bTargetAssistActive = true;
+
+	// Motion Warping: mark the attack target so an attack montage with a Motion Warping window ("AttackTarget")
+	// closes the gap DURING the swing and the weapon sweep actually connects. Stop short (StopDistance) so we
+	// don't overlap the enemy. For montages that use this, turn TargetAssist.bStepIn off to avoid double-moving.
+	if (MotionWarping)
+	{
+		const FVector WarpLoc = Target->GetActorLocation() - Dir * Cfg.StopDistance;
+		MotionWarping->AddOrUpdateWarpTargetFromLocationAndRotation(FName("AttackTarget"), WarpLoc, TargetAssistGoalRot);
+	}
 
 	return Target;
 }

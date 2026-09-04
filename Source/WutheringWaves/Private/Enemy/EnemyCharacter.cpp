@@ -18,6 +18,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/AudioComponent.h"
+#include "MotionWarpingComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "UI/WuwaHUD.h"
 
@@ -27,6 +28,8 @@ AEnemyCharacter::AEnemyCharacter()
 	// (last time "abilities not granted" was because possess never happened, this prevents that)
 	AIControllerClass = AWuwaEnemyController::StaticClass();
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+
+	MotionWarping = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarping"));
 }
 
 void AEnemyCharacter::BeginPlay()
@@ -252,6 +255,30 @@ void AEnemyCharacter::PlayHitReact()
 	Super::PlayHitReact();
 }
 
+void AEnemyCharacter::SetAttackTracking(bool bEnable)
+{
+	if (bEnable == bAttackTracking)
+	{
+		return;
+	}
+	bAttackTracking = bEnable;
+
+	// While aiming, turn OFF orient-to-movement. Otherwise the movement component re-faces the enemy toward
+	// its velocity every frame and cancels our FacePlayerYaw - which is why the attack "just kept going straight".
+	if (UCharacterMovementComponent* Move = GetCharacterMovement())
+	{
+		if (bEnable)
+		{
+			bSavedOrientToMovement = Move->bOrientRotationToMovement;
+			Move->bOrientRotationToMovement = false;
+		}
+		else
+		{
+			Move->bOrientRotationToMovement = bSavedOrientToMovement;
+		}
+	}
+}
+
 void AEnemyCharacter::FacePlayerYaw(float DeltaTime)
 {
 	APawn* Player = UGameplayStatics::GetPlayerPawn(this, 0);
@@ -272,17 +299,31 @@ void AEnemyCharacter::FacePlayerYaw(float DeltaTime)
 	GoalRot.Pitch = CurrentRot.Pitch;   // yaw only - keep the enemy upright
 	GoalRot.Roll  = CurrentRot.Roll;
 
-	// already facing closely enough -> don't jitter
-	if (FMath::Abs(FMath::FindDeltaAngleDegrees(CurrentRot.Yaw, GoalRot.Yaw)) <= AttackTrackDeadzoneDeg)
+	// Motion Warping: keep "AttackTarget" pointed at the player each frame, so a root-motion attack (with a
+	// Motion Warping notify on its montage) HOMES toward the player during the wind-up instead of going straight.
+	// Warp to a point that stops SHORT of the player (AttackStopDistance) so the swing lands in reach; when
+	// already inside that distance, aim the target at ourselves so we don't warp forward/backward oddly.
+	if (MotionWarping)
 	{
-		return;
+		const float Dist = ToPlayer.Size();
+		FVector WarpLoc = GetActorLocation();
+		if (Dist > AttackStopDistance)
+		{
+			const FVector Dir = ToPlayer / Dist;
+			WarpLoc = Player->GetActorLocation() - Dir * AttackStopDistance;
+		}
+		MotionWarping->AddOrUpdateWarpTargetFromLocationAndRotation(
+			FName("AttackTarget"), WarpLoc, FRotator(0.f, GoalRot.Yaw, 0.f));
 	}
 
-	const FRotator NewRot = (AttackTurnSpeed > 0.f)
-		? FMath::RInterpTo(CurrentRot, GoalRot, DeltaTime, AttackTurnSpeed)
-		: GoalRot;
-
-	SetActorRotation(NewRot);
+	// non-root-motion attacks: also turn manually (harmless when Motion Warping is driving the rotation)
+	if (FMath::Abs(FMath::FindDeltaAngleDegrees(CurrentRot.Yaw, GoalRot.Yaw)) > AttackTrackDeadzoneDeg)
+	{
+		const FRotator NewRot = (AttackTurnSpeed > 0.f)
+			? FMath::RInterpTo(CurrentRot, GoalRot, DeltaTime, AttackTurnSpeed)
+			: GoalRot;
+		SetActorRotation(NewRot);
+	}
 }
 
 void AEnemyCharacter::ApplyGroggyDamage(float Amount)

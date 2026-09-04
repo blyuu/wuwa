@@ -42,7 +42,20 @@ UWuWa_AttributeSetBase::UWuWa_AttributeSetBase()
 
 bool UWuWa_AttributeSetBase::PreGameplayEffectExecute(struct FGameplayEffectModCallbackData& Data)
 {
-	return Super::PreGameplayEffectExecute(Data);
+	if (!Super::PreGameplayEffectExecute(Data))
+	{
+		return false;
+	}
+
+	// i-frames: if the target is invulnerable (dodge i-frame window / ultimate), reject incoming damage.
+	// Returning false cancels the whole effect -> no HP change, no hit-react interrupt, no damage number, no hit sound.
+	if (Data.EvaluatedData.Attribute == GetDamageAttribute()
+		&& Data.Target.HasMatchingGameplayTag(StateTags::State_Invulnerable))
+	{
+		return false;
+	}
+
+	return true;
 }
 
 void UWuWa_AttributeSetBase::PostGameplayEffectExecute(const struct FGameplayEffectModCallbackData& Data)

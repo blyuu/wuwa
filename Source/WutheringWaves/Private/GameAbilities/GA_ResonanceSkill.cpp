@@ -157,6 +157,8 @@ void UGA_ResonanceSkill::OnHitEvent(FGameplayEventData Payload)
 		FGameplayEffectSpecHandle Spec = SourceASC->MakeOutgoingSpec(Skill->DamageEffect, 1.f, Context);
 		if (Spec.IsValid())
 		{
+			// data-driven damage: the number lives in the skill data (Skills[tag].Damage), injected via SetByCaller
+			Spec.Data->SetSetByCallerMagnitude(DataTags::Data_Damage, Skill->Damage);
 			TargetASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
 		}
 	}

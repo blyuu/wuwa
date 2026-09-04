@@ -23,8 +23,9 @@ struct FSkillData
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<class UGameplayEffect> DamageEffect;
 	
+	// flat damage this skill deals. Injected into the damage GE via SetByCaller (Data.Damage) - same as enemies.
 	UPROPERTY(EditDefaultsOnly)
-	float DamageMultiplier = 1.f;
+	float Damage = 10.f;
 
 	// how much this skill drains from an enemy's groggy gauge on hit
 	UPROPERTY(EditDefaultsOnly)

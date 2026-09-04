@@ -22,6 +22,8 @@ class WUTHERINGWAVES_API UGA_Liberation : public UGA_ResonanceSkill
 	GENERATED_BODY()
 
 public:
+	UGA_Liberation();
+
 	// gate: only allow activation while the ultimate gauge is full
 	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr,
