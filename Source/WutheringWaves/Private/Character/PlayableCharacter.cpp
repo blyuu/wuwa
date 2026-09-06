@@ -17,6 +17,19 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
+#include "DrawDebugHelpers.h"
+#include "HAL/IConsoleManager.h"
+
+#if ENABLE_DRAW_DEBUG
+// Capture toggle for screenshots: console `wuwa.DebugTargeting 1` to draw the soft lock-on acquisition.
+// Off in normal play; the draw calls compile out entirely in Shipping (ENABLE_DRAW_DEBUG == 0).
+static TAutoConsoleVariable<int32> CVarDebugTargeting(
+	TEXT("wuwa.DebugTargeting"),
+	0,
+	TEXT("Draw soft lock-on acquisition: aim cone (cyan), candidates (cyan = in cone, gray = out), ")
+	TEXT("selected target (red), and the step-in / rotation blend arrows (orange). 0=off, 1=on."),
+	ECVF_Cheat);
+#endif
 
 APlayableCharacter::APlayableCharacter()
 {
@@ -58,6 +71,16 @@ void APlayableCharacter::Tick(float DeltaTime)
 	{
 		SetActorRotation(NewRot);
 	}
+
+#if ENABLE_DRAW_DEBUG
+	if (CVarDebugTargeting.GetValueOnGameThread() > 0)
+	{
+		// one short-lived arrow per frame -> the blend leaves a fan tracing the turn (and step-in) toward the target
+		DrawDebugDirectionalArrow(GetWorld(),
+			GetActorLocation(), GetActorLocation() + GetActorForwardVector() * 120.f,
+			30.f, FColor::Orange, false, 0.7f, 0, 2.f);
+	}
+#endif
 
 	if (Alpha >= 1.f)
 	{
@@ -400,6 +423,10 @@ AEnemyCharacter* APlayableCharacter::AcquireTargetEnemy() const
 	const float CosHalfCone = FMath::Cos(FMath::DegreesToRadians(Cfg.ConeHalfAngleDeg));
 	const float RangeSq = Cfg.Range * Cfg.Range;
 
+#if ENABLE_DRAW_DEBUG
+	const bool bDbgTargeting = CVarDebugTargeting.GetValueOnGameThread() > 0;
+#endif
+
 	AEnemyCharacter* Best = nullptr;
 	bool bBestInCone = false;
 	float BestDistSq = TNumericLimits<float>::Max();
@@ -423,6 +450,15 @@ AEnemyCharacter* APlayableCharacter::AcquireTargetEnemy() const
 		const float Dot = FVector::DotProduct(ToEnemy.GetSafeNormal(), AimDir);
 		const bool bInCone = Dot >= CosHalfCone;
 
+#if ENABLE_DRAW_DEBUG
+		if (bDbgTargeting)
+		{
+			// cyan = eligible (inside cone), gray = considered but outside the cone
+			DrawDebugSphere(World, Enemy->GetActorLocation(), 45.f, 12,
+				bInCone ? FColor::Cyan : FColor(90, 90, 90), false, 2.5f);
+		}
+#endif
+
 		// prefer targets inside the aim cone; within the same class, prefer the nearest.
 		const bool bBetter = (bInCone && !bBestInCone) ||
 			(bInCone == bBestInCone && DistSq < BestDistSq);
@@ -433,6 +469,21 @@ AEnemyCharacter* APlayableCharacter::AcquireTargetEnemy() const
 			BestDistSq = DistSq;
 		}
 	}
+
+#if ENABLE_DRAW_DEBUG
+	if (bDbgTargeting)
+	{
+		// the camera-facing aim cone the acquisition searched, plus the winner (red)
+		const float ConeRad = FMath::DegreesToRadians(Cfg.ConeHalfAngleDeg);
+		DrawDebugCone(World, Origin, AimDir, Cfg.Range, ConeRad, ConeRad, 24, FColor::Cyan, false, 2.5f, 0, 1.5f);
+		if (Best)
+		{
+			DrawDebugSphere(World, Best->GetActorLocation(), 55.f, 16, FColor::Red, false, 2.5f, 0, 3.f);
+			DrawDebugLine(World, Origin, Best->GetActorLocation(), FColor::Red, false, 2.5f, 0, 3.f);
+		}
+	}
+#endif
+
 	return Best;
 }
 

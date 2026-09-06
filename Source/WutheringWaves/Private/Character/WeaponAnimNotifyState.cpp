@@ -10,6 +10,19 @@
 #include "GameplayTags/WuwaGameplayTags.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/GameplayStatics.h"
+#include "DrawDebugHelpers.h"
+#include "HAL/IConsoleManager.h"
+
+#if ENABLE_DRAW_DEBUG
+// Capture toggle for screenshots: console `wuwa.DebugFallback 1` to draw the fallback-correction gate.
+// Off in normal play; the draw calls compile out entirely in Shipping (ENABLE_DRAW_DEBUG == 0).
+static TAutoConsoleVariable<int32> CVarDebugFallback(
+	TEXT("wuwa.DebugFallback"),
+	0,
+	TEXT("Draw the melee fallback-correction gate: front cone (yellow) + range ring, and the ")
+	TEXT("line to the candidate (green = correction fired, red = rejected by the gate). 0=off, 1=on."),
+	ECVF_Cheat);
+#endif
 
 void UWeaponAnimNotifyState::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration)
 {
@@ -143,12 +156,40 @@ void UWeaponAnimNotifyState::TryFallbackHit(USkeletalMeshComponent* MeshComp)
 		}
 	}
 
+#if ENABLE_DRAW_DEBUG
+	// Draws the exact gate the correction uses (front cone + range ring) and a line to the candidate.
+	// Called at the point of decision so screenshots show WHY the swing did/didn't get corrected.
+	const bool bDbgFallback = CVarDebugFallback.GetValueOnGameThread() > 0;
+	auto DrawFallbackGate = [&](const FColor& OutcomeColor)
+	{
+		UWorld* World = Character->GetWorld();
+		if (!bDbgFallback || !World) return;
+
+		const FVector Origin = Character->GetActorLocation();
+		FVector Fwd = Character->GetActorForwardVector();
+		Fwd.Z = 0.f; Fwd.Normalize();
+
+		const float ConeRad = FMath::DegreesToRadians(FallbackConeHalfAngleDeg);
+		const float Life = 2.5f;   // stays alive long enough to Pause + HighResShot
+
+		DrawDebugCone(World, Origin, Fwd, FallbackRange, ConeRad, ConeRad, 24, FColor(255, 200, 0), false, Life, 0, 1.5f);
+		DrawDebugCircle(World, Origin, FallbackRange, 48, FColor(120, 120, 120), false, Life, 0, 1.f, FVector(1, 0, 0), FVector(0, 1, 0), false);
+
+		// green = correction actually fired, red = rejected by range/cone
+		DrawDebugLine(World, Origin, Target->GetActorLocation(), OutcomeColor, false, Life, 0, 3.f);
+		DrawDebugSphere(World, Target->GetActorLocation(), 40.f, 12, OutcomeColor, false, Life);
+	};
+#endif
+
 	// range + front-cone gate so we only "correct" onto something the swing plausibly aimed at
 	FVector ToTarget = Target->GetActorLocation() - Character->GetActorLocation();
 	ToTarget.Z = 0.f;
 	const float Dist = ToTarget.Size();
 	if (Dist > FallbackRange || Dist < KINDA_SMALL_NUMBER)
 	{
+#if ENABLE_DRAW_DEBUG
+		DrawFallbackGate(FColor::Red);
+#endif
 		return;
 	}
 	ToTarget /= Dist;
@@ -160,6 +201,9 @@ void UWeaponAnimNotifyState::TryFallbackHit(USkeletalMeshComponent* MeshComp)
 	const float CosHalf = FMath::Cos(FMath::DegreesToRadians(FallbackConeHalfAngleDeg));
 	if (FVector::DotProduct(Forward, ToTarget) < CosHalf)
 	{
+#if ENABLE_DRAW_DEBUG
+		DrawFallbackGate(FColor::Red);
+#endif
 		return;
 	}
 
@@ -170,4 +214,8 @@ void UWeaponAnimNotifyState::TryFallbackHit(USkeletalMeshComponent* MeshComp)
 
 	const FGameplayTag EventToSend = HitEventTag.IsValid() ? HitEventTag : EventTags::Event_Attack_Hit;
 	ASC->HandleGameplayEvent(EventToSend, &EventData);
+
+#if ENABLE_DRAW_DEBUG
+	DrawFallbackGate(FColor::Green);
+#endif
 }
