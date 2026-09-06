@@ -85,4 +85,6 @@ DerivedDataCache/*
 # Prerequisites
 *.d
 
-Docs/*
+# Portfolio drafts (working notes, not part of the repo docs)
+Docs/drafts/
+
