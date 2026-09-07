@@ -45,17 +45,6 @@
 
 ---
 
-## Screenshots
-
-| | |
-|:---:|:---:|
-| <img src="Docs/media/combat-01.png" width="420"> | <img src="Docs/media/combat-02.png" width="420"> |
-| <img src="Docs/media/combat-03.png" width="420"> | <img src="Docs/media/combat-04.png" width="420"> |
-
-> GIF 데모(콤보 · 팀 교체 · 보스 그로기 등)는 추가 예정입니다.
-
----
-
 ## Key Features
 
 | 시스템 | 요약 |
