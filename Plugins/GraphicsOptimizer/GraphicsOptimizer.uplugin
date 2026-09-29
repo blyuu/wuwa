@@ -1,0 +1,15 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "0.1",
+  "FriendlyName": "Graphics Optimizer",
+  "Description": "Automated graphics scalability experiments and frame timing benchmarks.",
+  "Category": "Profiling",
+  "CreatedBy": "GraphicsOptimizer",
+  "CanContainContent": false,
+  "IsBetaVersion": true,
+  "Modules": [
+    { "Name": "GraphicsOptimizerRuntime", "Type": "Runtime", "LoadingPhase": "Default" },
+    { "Name": "GraphicsOptimizerEditor", "Type": "Editor", "LoadingPhase": "Default" }
+  ]
+}
