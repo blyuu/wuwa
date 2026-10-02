@@ -10,7 +10,7 @@ public class WutheringWaves : ModuleRules
 	
 		PublicDependencyModuleNames.AddRange(new string[]
 		{
-			"Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "MotionWarping", "GameplayAbilities", "GameplayTags", "GameplayTasks", "AIModule", "NavigationSystem", "UMG"
+			"Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "MotionWarping", "Niagara", "GameplayAbilities", "GameplayTags", "GameplayTasks", "AIModule", "NavigationSystem", "UMG"
 		});
 
 		// Slate/SlateCore: needed to touch FSlateBrush / FProgressBarStyle directly (per-character bar fill image)
