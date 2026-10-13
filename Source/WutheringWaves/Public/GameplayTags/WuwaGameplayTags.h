@@ -44,6 +44,7 @@ namespace StateTags
 {
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Invulnerable);				//i-frame during dodge (blocks damage GE)
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_State_Attacking);			//enemy is inside an attack danger window
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_State_Parryable);			//enemy attack can be countered by a real weapon hit
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Enemy_State_Groggy);				//enemy is staggered/groggy (takes extra damage)
 }
 
@@ -67,6 +68,7 @@ namespace EventTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_EnemyAttack_Hit);			//Enemy attack hit event
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combo_WindowOpen);			//Normal attack combo event
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Skill_Voice);				//play a random skill voice line
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Skill_Vfx);				//spawn a skill's data-asset-driven VFX
 }
 
 namespace RangeTags

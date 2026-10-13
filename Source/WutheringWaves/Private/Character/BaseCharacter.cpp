@@ -9,6 +9,8 @@
 #include "Animation/AnimMontage.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
 
 
 ABaseCharacter::ABaseCharacter()
@@ -170,4 +172,26 @@ void ABaseCharacter::PlayHitReact()
 			UGameplayStatics::SpawnSoundAttached(Voice, GetMesh());
 		}
 	}
+}
+
+void ABaseCharacter::PlayAttachedNiagaraEffect(UNiagaraSystem* Effect, bool bAttachToWeapon, FName SocketName,
+	const FVector& LocationOffset, const FRotator& RotationOffset) const
+{
+	if (!Effect)
+	{
+		return;
+	}
+
+	USkeletalMeshComponent* AttachMesh = GetMesh();
+	if (bAttachToWeapon)
+	{
+		if (!CurrentWeapon || !CurrentWeapon->SkeletalMeshComponent)
+		{
+			return;
+		}
+		AttachMesh = CurrentWeapon->SkeletalMeshComponent;
+	}
+
+	UNiagaraFunctionLibrary::SpawnSystemAttached(Effect, AttachMesh, SocketName,
+		LocationOffset, RotationOffset, EAttachLocation::KeepRelativeOffset, true);
 }

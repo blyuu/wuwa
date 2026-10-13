@@ -21,6 +21,7 @@
 #include "MotionWarpingComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "UI/WuwaHUD.h"
+#include "TimerManager.h"
 
 AEnemyCharacter::AEnemyCharacter()
 {
@@ -172,6 +173,88 @@ bool AEnemyCharacter::TryDodge()
 	return true;
 }
 
+bool AEnemyCharacter::TryParry()
+{
+	if (bIsDead || bIsGroggy || bIsRecovering || bIsParryStunned || !AbilitySystemComponent
+		|| !AbilitySystemComponent->HasMatchingGameplayTag(StateTags::Enemy_State_Parryable))
+	{
+		return false;
+	}
+
+	FGameplayAbilitySpecHandle AttackHandle;
+	for (const FGameplayAbilitySpec& Spec : AbilitySystemComponent->GetActivatableAbilities())
+	{
+		if (Spec.IsActive() && Spec.Ability && Spec.Ability->IsA(UGA_EnemyAttack::StaticClass()))
+		{
+			AttackHandle = Spec.Handle;
+			break;
+		}
+	}
+	if (!AttackHandle.IsValid())
+	{
+		return false;
+	}
+
+	bIsParryStunned = true;
+	AbilitySystemComponent->CancelAbilityHandle(AttackHandle);
+	if (UAnimInstance* Anim = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr)
+	{
+		if (CurrentMontage && Anim->Montage_IsPlaying(CurrentMontage))
+		{
+			Anim->Montage_Stop(0.08f, CurrentMontage);
+		}
+	}
+	SetAttackTracking(false);
+	if (UCharacterMovementComponent* Move = GetCharacterMovement())
+	{
+		Move->StopMovementImmediately();
+	}
+
+	if (AAIController* AI = Cast<AAIController>(GetController()))
+	{
+		if (AI->GetBrainComponent())
+		{
+			AI->GetBrainComponent()->PauseLogic(TEXT("Parried"));
+		}
+	}
+
+	// Bypass the normal random hit-react chance: a successful parry must always read as an interrupt.
+	ABaseCharacter::PlayHitReact();
+	ApplyGroggyDamage(EnemyDataAsset ? EnemyDataAsset->ParryGroggyDamage : 0.f);
+
+	if (bIsGroggy)
+	{
+		// Groggy owns the recovery; its existing flow restarts the AI after the get-up montage.
+		bIsParryStunned = false;
+	}
+	else
+	{
+		const float Duration = EnemyDataAsset ? EnemyDataAsset->ParryStaggerDuration : 0.5f;
+		GetWorldTimerManager().SetTimer(ParryStaggerTimer, this, &AEnemyCharacter::FinishParryStagger,
+			FMath::Max(Duration, 0.01f), false);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[Parry] %s attack interrupted"), *GetName());
+	return true;
+}
+
+void AEnemyCharacter::FinishParryStagger()
+{
+	bIsParryStunned = false;
+	if (bIsDead || bIsGroggy || bIsRecovering)
+	{
+		return;
+	}
+
+	if (AAIController* AI = Cast<AAIController>(GetController()))
+	{
+		if (AI->GetBrainComponent())
+		{
+		AI->GetBrainComponent()->ResumeLogic(TEXT("Parry stagger ended"));
+		}
+	}
+}
+
 void AEnemyCharacter::OnDodgeMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
 	bIsDodging = false;
@@ -246,7 +329,7 @@ void AEnemyCharacter::OnIntroMontageEnded(UAnimMontage* Montage, bool bInterrupt
 void AEnemyCharacter::PlayHitReact()
 {
 	// never flinch while staggered / getting up - it would cut the groggy loop or the get-up montage
-	if (bIsGroggy || bIsRecovering)
+	if (bIsGroggy || bIsRecovering || bIsParryStunned)
 	{
 		return;
 	}
@@ -495,7 +578,7 @@ int32 AEnemyCharacter::GetCurrentPhase() const
 
 void AEnemyCharacter::PerformAttack()
 {
-	if (!AbilitySystemComponent || !EnemyDataAsset)
+	if (!AbilitySystemComponent || !EnemyDataAsset || bIsParryStunned || bIsGroggy || bIsDead)
 	{
 		return;
 	}
@@ -543,6 +626,8 @@ void AEnemyCharacter::PerformAttack()
 
 void AEnemyCharacter::HandleDeath()
 {
+	GetWorldTimerManager().ClearTimer(ParryStaggerTimer);
+	bIsParryStunned = false;
 	Super::HandleDeath();
 
 	// take the boss bar down with the boss

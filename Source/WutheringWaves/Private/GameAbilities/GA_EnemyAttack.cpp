@@ -85,7 +85,7 @@ void UGA_EnemyAttack::OnVoiceEvent(FGameplayEventData Payload)
 void UGA_EnemyAttack::PlaySkillVoice()
 {
 	AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(GetCurrentActorInfo()->AvatarActor);
-	if (!Enemy || !Enemy->EnemyDataAsset) return;
+	if (!Enemy || !Enemy->EnemyDataAsset || Enemy->IsParryStunned()) return;
 
 	// pick a random line for the attack type that PerformAttack chose (CurrentSkillTag)
 	const FEnemySkillData* SkillData = Enemy->EnemyDataAsset->Skills.Find(Enemy->CurrentSkillTag);
@@ -118,7 +118,7 @@ void UGA_EnemyAttack::PlaySkillVoice()
 void UGA_EnemyAttack::OnHitEvent(FGameplayEventData Payload)
 {
 	AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(GetCurrentActorInfo()->AvatarActor);
-	if (!Enemy || !Enemy->EnemyDataAsset) return;
+	if (!Enemy || !Enemy->EnemyDataAsset || Enemy->IsParryStunned()) return;
 
 	// keep aiming through the WHOLE attack (not just up to the first hit), so a multi-hit attack follows the
 	// player on every swing instead of lunging straight after the first. Tracking stops in EndAbility.
@@ -158,6 +158,11 @@ void UGA_EnemyAttack::EndAbility(const FGameplayAbilitySpecHandle Handle, const 
 		if (AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(ActorInfo->AvatarActor))
 		{
 			Enemy->SetAttackTracking(false);
+			// An interrupted montage must not leave a stale parry window on the ASC.
+			if (UAbilitySystemComponent* EnemyASC = Enemy->GetAbilitySystemComponent())
+			{
+				EnemyASC->SetLooseGameplayTagCount(StateTags::Enemy_State_Parryable, 0);
+			}
 		}
 	}
 

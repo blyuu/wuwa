@@ -52,5 +52,9 @@ void UPlayerAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	}
 	
 	bIsFalling = OwnerCharacterMovement->IsFalling();
+	bIsJumpingUp = bIsFalling && Velocity.Z > 5.f;
+	bIsFallingDown = bIsFalling && !bIsJumpingUp;
+	AirborneTime = bIsFalling ? AirborneTime + DeltaSeconds : 0.f;
+	bIsLongFall = bIsFallingDown && AirborneTime > 1.0f;
 	
 }

@@ -6,6 +6,7 @@
 #include "BaseCharacter.generated.h"
 
 class UGameplayAbility;
+class UNiagaraSystem;
 
 UCLASS()
 class WUTHERINGWAVES_API ABaseCharacter : public ACharacter, public IAbilitySystemInterface
@@ -92,4 +93,10 @@ public:
 	// Actual Weapon that the player held
 	UPROPERTY()
 	AWeaponClass* CurrentWeapon;
+
+	// Spawns a one-shot Niagara effect attached to the weapon mesh (or this character's mesh), as
+	// described by a skill's FSkillVfxData entry. Shared by every ability so skill VFX stays fully
+	// data-asset-driven instead of each ability duplicating the attach-mesh lookup.
+	void PlayAttachedNiagaraEffect(UNiagaraSystem* Effect, bool bAttachToWeapon, FName SocketName,
+		const FVector& LocationOffset, const FRotator& RotationOffset) const;
 };

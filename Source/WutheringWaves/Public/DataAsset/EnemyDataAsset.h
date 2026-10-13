@@ -94,6 +94,14 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Groggy")
 	float GroggyDamageMultiplier = 1.5f;
 
+	// Extra groggy damage when a real player weapon hit parries an attack.
+	UPROPERTY(EditDefaultsOnly, Category = "Parry", meta = (ClampMin = "0.0"))
+	float ParryGroggyDamage = 25.f;
+
+	// Time before the enemy AI resumes after a successful parry (unless groggy takes over).
+	UPROPERTY(EditDefaultsOnly, Category = "Parry", meta = (ClampMin = "0.0"))
+	float ParryStaggerDuration = 0.5f;
+
 	// enemy move speed (goes into CharacterMovement MaxWalkSpeed) player default is 600 so enemy usually lower
 	UPROPERTY(EditDefaultsOnly)
 	float MoveSpeed = 300.f;

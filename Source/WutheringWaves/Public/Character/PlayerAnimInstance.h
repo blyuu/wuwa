@@ -38,5 +38,18 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	uint8 bIsFalling: 1;
+
+	// Separate a jump takeoff from stepping off a ledge so each uses the right state.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	uint8 bIsJumpingUp: 1;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	uint8 bIsFallingDown: 1;
+
+	// A normal hop lands before this becomes true; keep the fall loop for longer drops.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	uint8 bIsLongFall: 1;
+
+	float AirborneTime = 0.f;
 	
 };

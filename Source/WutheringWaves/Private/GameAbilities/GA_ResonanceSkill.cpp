@@ -69,6 +69,12 @@ void UGA_ResonanceSkill::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 	WaitVoice->EventReceived.AddDynamic(this, &UGA_ResonanceSkill::OnVoiceEvent);
 	WaitVoice->ReadyForActivation();
 
+	// VFX event - an AN_SendGameplayEvent notify on the montage fires this -> spawns the matching Vfx[] entry
+	UAbilityTask_WaitGameplayEvent* WaitVfx = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+		this, EventTags::Event_Skill_Vfx);
+	WaitVfx->EventReceived.AddDynamic(this, &UGA_ResonanceSkill::OnVfxEvent);
+	WaitVfx->ReadyForActivation();
+
 	// apply cooldown: duration from the data (SetByCaller), and add our cooldown tag dynamically so the
 	// HUD can read the remaining time and re-cast is blocked (see CanActivateAbility).
 	if (CooldownEffect && CooldownTag.IsValid() && Skill->Cooldown > 0.f)
@@ -125,6 +131,24 @@ void UGA_ResonanceSkill::PlaySkillVoice()
 	{
 		UGameplayStatics::SpawnSoundAttached(Voice, Character->GetMesh());
 	}
+}
+
+void UGA_ResonanceSkill::OnVfxEvent(FGameplayEventData Payload)
+{
+	PlaySkillVfx(FMath::RoundToInt(Payload.EventMagnitude));
+}
+
+void UGA_ResonanceSkill::PlaySkillVfx(int32 VfxIndex)
+{
+	APlayableCharacter* Character = Cast<APlayableCharacter>(GetCurrentActorInfo()->AvatarActor);
+	if (!Character || !Character->CharacterData) return;
+
+	const FSkillData* Skill = Character->CharacterData->Skills.Find(GetAssetTags().First());
+	if (!Skill || !Skill->Vfx.IsValidIndex(VfxIndex)) return;
+
+	const FSkillVfxData& Vfx = Skill->Vfx[VfxIndex];
+	Character->PlayAttachedNiagaraEffect(Vfx.Effect, Vfx.bAttachToWeapon, Vfx.SocketName,
+		Vfx.LocationOffset, Vfx.RotationOffset);
 }
 
 void UGA_ResonanceSkill::OnHitEvent(FGameplayEventData Payload)

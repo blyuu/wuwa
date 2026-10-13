@@ -132,6 +132,12 @@ void UGA_BaseAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, co
 		this, EventTags::Event_Skill_Voice);
 	WaitVoice->EventReceived.AddDynamic(this, &UGA_BaseAttack::OnVoiceEvent);
 	WaitVoice->ReadyForActivation();
+
+	// VFX event - an AN_SendGameplayEvent notify on the montage fires this -> spawns the matching Vfx[] entry
+	UAbilityTask_WaitGameplayEvent* WaitVfx = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+		this, EventTags::Event_Skill_Vfx);
+	WaitVfx->EventReceived.AddDynamic(this, &UGA_BaseAttack::OnVfxEvent);
+	WaitVfx->ReadyForActivation();
 }
 
 void UGA_BaseAttack::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility,
@@ -173,12 +179,15 @@ void UGA_BaseAttack::OnHitEvent(FGameplayEventData Payload)
 		if (HitActor)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("[Melee] Hit confirmed: %s"), *HitActor->GetName());
+			// The fallback aim correction has no TargetData. Only a real weapon sweep can parry.
+			AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(HitActor);
+			const bool bParried = Enemy && Payload.TargetData.Num() > 0 && Enemy->TryParry();
 
 			// the enemy may backstep out of this hit (chance from its data asset). If it dodges,
 			// nothing lands - no damage, groggy, or gauge gain.
-			if (AEnemyCharacter* DodgeEnemy = Cast<AEnemyCharacter>(HitActor))
+			if (Enemy && !bParried)
 			{
-				if (DodgeEnemy->TryDodge()) return;
+				if (Enemy->TryDodge()) return;
 			}
 
 			UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor);
@@ -199,7 +208,7 @@ void UGA_BaseAttack::OnHitEvent(FGameplayEventData Payload)
 			}
 
 			// drain the enemy's groggy gauge by this skill's groggy value
-			if (AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(HitActor))
+			if (Enemy)
 			{
 				Enemy->ApplyGroggyDamage(SkillData.GroggyDamage);
 			}
@@ -242,6 +251,24 @@ void UGA_BaseAttack::PlaySkillVoice()
 	{
 		UGameplayStatics::SpawnSoundAttached(Voice, BaseCharacter->GetMesh());
 	}
+}
+
+void UGA_BaseAttack::OnVfxEvent(FGameplayEventData Payload)
+{
+	PlaySkillVfx(FMath::RoundToInt(Payload.EventMagnitude));
+}
+
+void UGA_BaseAttack::PlaySkillVfx(int32 VfxIndex)
+{
+	APlayableCharacter* BaseCharacter = Cast<APlayableCharacter>(GetCurrentActorInfo()->AvatarActor);
+	if (!BaseCharacter || !BaseCharacter->CharacterData) return;
+
+	const FSkillData& Skill = BaseCharacter->CharacterData->Skills[GetAssetTags().First()];
+	if (!Skill.Vfx.IsValidIndex(VfxIndex)) return;
+
+	const FSkillVfxData& Vfx = Skill.Vfx[VfxIndex];
+	BaseCharacter->PlayAttachedNiagaraEffect(Vfx.Effect, Vfx.bAttachToWeapon, Vfx.SocketName,
+		Vfx.LocationOffset, Vfx.RotationOffset);
 }
 
 void UGA_BaseAttack::PerformRangedTrace()

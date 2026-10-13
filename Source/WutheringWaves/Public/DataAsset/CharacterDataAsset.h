@@ -7,6 +7,33 @@
 #include "GameplayTags/WuwaGameplayTags.h"
 #include "CharacterDataAsset.generated.h"
 
+class UNiagaraSystem;
+
+// One VFX cue for a skill (cast burst, impact burst, trail, ...). A skill can list several; an
+// AN_SendGameplayEvent notify on its montage (Event.Skill.Vfx, EventIndex = this entry's index)
+// marks WHEN each one fires, while this struct holds WHAT plays and WHERE it's attached.
+USTRUCT(BlueprintType)
+struct FSkillVfxData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<UNiagaraSystem> Effect;
+
+	// Use the equipped weapon mesh, or the character mesh for unarmed/ranged attacks.
+	UPROPERTY(EditDefaultsOnly)
+	bool bAttachToWeapon = true;
+
+	// Leave empty to attach to the chosen mesh origin; otherwise use one of its sockets.
+	UPROPERTY(EditDefaultsOnly)
+	FName SocketName = NAME_None;
+
+	UPROPERTY(EditDefaultsOnly)
+	FVector LocationOffset = FVector::ZeroVector;
+
+	UPROPERTY(EditDefaultsOnly)
+	FRotator RotationOffset = FRotator::ZeroRotator;
+};
 
 USTRUCT(BlueprintType)
 struct FSkillData
@@ -55,6 +82,10 @@ struct FSkillData
 	UPROPERTY(EditDefaultsOnly)
 	float Cooldown = 0.f;
 
+	// VFX cues for this skill, indexed in authoring order. Trigger one from the montage with an
+	// AN_SendGameplayEvent notify (Event.Skill.Vfx) whose EventIndex matches the entry to play.
+	UPROPERTY(EditDefaultsOnly)
+	TArray<FSkillVfxData> Vfx;
 
 };
 

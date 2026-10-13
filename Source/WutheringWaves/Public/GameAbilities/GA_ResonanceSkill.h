@@ -59,5 +59,11 @@ private:
 
 	void PlaySkillVoice();
 
+	// fired by an AN_SendGameplayEvent notify (Event.Skill.Vfx) -> spawns Skills[Tag].Vfx[EventIndex]
+	UFUNCTION()
+	void OnVfxEvent(FGameplayEventData Payload);
+
+	void PlaySkillVfx(int32 VfxIndex);
+
 	TObjectPtr<UAnimMontage> CurrentMontage = nullptr;
 };

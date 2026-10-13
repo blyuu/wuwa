@@ -21,4 +21,10 @@ public:
 private:
 	UPROPERTY(EditAnywhere, Category = "Gameplay Ability")
 	FGameplayTag EventTag;
+
+	// optional payload for handlers that need to tell apart several notifies sending the same tag
+	// (e.g. Event.Skill.Vfx picking which FSkillData::Vfx entry to play). Unused by EventTag
+	// handlers that don't read EventMagnitude.
+	UPROPERTY(EditAnywhere, Category = "Gameplay Ability")
+	int32 EventIndex = 0;
 };

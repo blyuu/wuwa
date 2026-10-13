@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Character/BaseCharacter.h"
 #include "GameplayTagContainer.h"
+#include "TimerManager.h"
 #include "EnemyCharacter.generated.h"
 
 
@@ -44,6 +45,10 @@ public:
 	// rolls the data-asset dodge chance when the player lands a hit. On success plays the backstep montage
 	// and returns true (the attacker then skips damage). false = the hit connects normally.
 	bool TryDodge();
+
+	// Returns true only for an active, parryable attack; cancels it and applies stagger/groggy.
+	bool TryParry();
+	bool IsParryStunned() const { return bIsParryStunned; }
 
 	// plays the spawn intro (montage + voice) and pauses the AI until it finishes. Called from BeginPlay.
 	void PlayIntro();
@@ -111,6 +116,10 @@ protected:
 
 	// true while the backstep dodge montage is playing - prevents re-dodging mid-dodge
 	bool bIsDodging = false;
+
+	bool bIsParryStunned = false;
+	FTimerHandle ParryStaggerTimer;
+	void FinishParryStagger();
 
 	// clears bIsDodging when the dodge montage finishes
 	void OnDodgeMontageEnded(class UAnimMontage* Montage, bool bInterrupted);

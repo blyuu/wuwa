@@ -51,11 +51,17 @@ protected:
 	UFUNCTION()
 	void OnVoiceEvent(FGameplayEventData Payload);
 
+	// fired by an AN_SendGameplayEvent notify (Event.Skill.Vfx) -> spawns Skills[Tag].Vfx[EventIndex]
+	UFUNCTION()
+	void OnVfxEvent(FGameplayEventData Payload);
+
 private:
 	// apply GE_AttackBuff to every character in the team roster
 	void ApplyTeamBuff();
 
 	void PlaySkillVoice();
+
+	void PlaySkillVfx(int32 VfxIndex);
 
 	TObjectPtr<UAnimMontage> CurrentMontage = nullptr;
 };
