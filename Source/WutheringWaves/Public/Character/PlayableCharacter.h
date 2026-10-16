@@ -43,6 +43,8 @@ protected:
 
 	UFUNCTION()
 	void InputTagUseAbility(FGameplayTag InputTag);
+
+	void TryParryOnBasicAttackInput();
 	
 	void AddInputMapping();
 	void RemoveInputMapping();
@@ -115,8 +117,19 @@ public:
 	// once on activation; returns the enemy it locked onto (or null if there was none).
 	UFUNCTION(BlueprintCallable, Category = "Targeting")
 	AEnemyCharacter* FaceTargetForAttack();
+	void CancelTargetAssist();
+	virtual void PlayHitReact() override;
+	virtual void HandleDeath() override;
 
 private:
+	void UpdateSprintAnimationState();
+	UFUNCTION()
+	void UpdateAttackTracking(float DeltaSeconds, FVector OldLocation, FVector OldVelocity);
+	TWeakObjectPtr<AEnemyCharacter> AttackTrackingTarget;
+
+	bool bSprintHeld = false;
+	float SprintMovementGraceRemaining = 0.f;
+
 	// restores time dilation when the perfect-dodge slow-mo ends
 	FTimerHandle SlowMoTimerHandle;
 	void EndDodgeSlowMo();
@@ -127,6 +140,7 @@ private:
 	// running blend state for the turn / step-in kicked off by FaceTargetForAttack
 	bool bTargetAssistActive = false;
 	float TargetAssistElapsed = 0.f;
+	float PreviousAssistAlpha = 0.f;
 	float TargetAssistBlendTime = 0.f;
 	bool bTargetAssistStepIn = false;
 	FRotator TargetAssistStartRot;

@@ -135,7 +135,7 @@ void AEnemyCharacter::Tick(float DeltaTime)
 bool AEnemyCharacter::TryDodge()
 {
 	// can't dodge while dead / staggered / already mid-dodge, or if no dodge is configured
-	if (bIsDead || bIsGroggy || bIsDodging || !EnemyDataAsset)
+	if (bIsDead || bIsGroggy || bIsParryStunned || bIsDodging || !EnemyDataAsset)
 	{
 		return false;
 	}
