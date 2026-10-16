@@ -6,6 +6,7 @@ public class GraphicsOptimizerRuntime : ModuleRules
     {
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
         PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine" });
-        PrivateDependencyModuleNames.AddRange(new string[] { "RenderCore", "RHI", "InputCore" });
+        PrivateDependencyModuleNames.AddRange(new string[] { "RenderCore", "RHI", "InputCore", "Json", "Projects" });
+
     }
 }

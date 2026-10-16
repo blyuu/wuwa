@@ -37,6 +37,7 @@
 #include "ProfilingDebugging/TraceAuxiliary.h"
 #include "ProfilingDebugging/MiscTrace.h"
 #include "Misc/StringBuilder.h"
+#include "GraphicsOptimizerLocalization.h"
 
 void UGraphicsOptimizerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -50,16 +51,16 @@ void UGraphicsOptimizerSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 void UGraphicsOptimizerSubsystem::Deinitialize()
 {
     FCoreDelegates::OnEndFrame.Remove(EndFrameHandle);
-    if (IsLumenDetailStudyRunning()) FinishLumenDetailStudy(false, TEXT("PIE ended during Lumen detail study."));
-    if (IsGpuTraceCaptureRunning()) FinishGpuTraceCapture(false, TEXT("PIE ended during GPU trace capture."));
-    if (IsShadowStudyRunning()) FinishShadowStudy(false, TEXT("PIE ended during shadow study."));
-    if (IsMotionComparisonRunning()) FinishMotionComparison(false, TEXT("PIE ended during motion comparison."));
-    if (IsVisualComparisonRunning()) FinishVisualComparison(false, TEXT("PIE ended during visual comparison."));
-    if (Runner.IsRunning()) Runner.Abort(TEXT("Game instance ended during benchmark."));
+    if (IsLumenDetailStudyRunning()) FinishLumenDetailStudy(false, GOTEXT("PIE ended during Lumen detail study."));
+    if (IsGpuTraceCaptureRunning()) FinishGpuTraceCapture(false, GOTEXT("PIE ended during GPU trace capture."));
+    if (IsShadowStudyRunning()) FinishShadowStudy(false, GOTEXT("PIE ended during shadow study."));
+    if (IsMotionComparisonRunning()) FinishMotionComparison(false, GOTEXT("PIE ended during motion comparison."));
+    if (IsVisualComparisonRunning()) FinishVisualComparison(false, GOTEXT("PIE ended during visual comparison."));
+    if (Runner.IsRunning()) Runner.Abort(GOTEXT("Game instance ended during benchmark."));
     ArchiveBenchmarkIfFinished();
     RestoreStatUnit();
     RestoreGameplayPause();
-    if (IsFullAnalysisRunning()) FinishFullAnalysis(false, TEXT("PIE ended during full analysis."));
+    if (IsFullAnalysisRunning()) FinishFullAnalysis(false, GOTEXT("PIE ended during full analysis."));
     if (bHasAppliedConfiguration) RestoreAppliedConfiguration();
     ResolutionProbe.Reset();
     UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][Plugin] Game instance subsystem deinitialized."));
@@ -89,7 +90,7 @@ void UGraphicsOptimizerSubsystem::ArchiveReport(const FString& RunKey, const FSt
         RecordPath = FPaths::Combine(RecordDirectory, TEXT("Report.txt"));
         ReportHistoryPaths.Add(RunKey, RecordPath);
     }
-    const FString Snapshot = FString::Printf(TEXT("Report: %s\nRun identity: %s\nUpdated: %s\n\n%s\n"),
+    const FString Snapshot = FGraphicsOptimizerLocalization::Printf(TEXT("Report: %s\nRun identity: %s\nUpdated: %s\n\n%s\n"),
         *Title, *RunKey, *FDateTime::Now().ToString(TEXT("%Y-%m-%d %H:%M:%S")), *Report);
     if (!FFileHelper::SaveStringToFile(Snapshot, *RecordPath))
         UE_LOG(LogGraphicsOptimizer, Warning, TEXT("[GraphicsOptimizer][History] Could not save %s"), *RecordPath);
@@ -100,13 +101,13 @@ FString UGraphicsOptimizerSubsystem::GetAccumulatedReports() const
     TArray<FString> Paths;
     IFileManager::Get().FindFilesRecursive(Paths, *GetReportHistoryDirectory(), TEXT("Report.txt"), true, false);
     Paths.Sort();
-    FString Report = FString::Printf(TEXT("Graphics Optimizer | accumulated project reports\nRecords: %d\nDirectory: %s\nIndependent runs may have different scenes, cameras and settings. Their measurements must not be combined into one benchmark. Full-analysis records also repeat their constituent studies.\n"),
+    FString Report = FGraphicsOptimizerLocalization::Printf(TEXT("Graphics Optimizer | accumulated project reports\nRecords: %d\nDirectory: %s\nIndependent runs may have different scenes, cameras and settings. Their measurements must not be combined into one benchmark. Full-analysis records also repeat their constituent studies.\n"),
         Paths.Num(), *GetReportHistoryDirectory());
     for (const FString& Path : Paths)
     {
         FString Snapshot;
         if (FFileHelper::LoadFileToString(Snapshot, *Path))
-            Report += TEXT("\n--------------------\n") + Snapshot;
+            Report += GOTEXT("\n--------------------\n") + Snapshot;
     }
     return Report;
 }
@@ -116,33 +117,33 @@ void UGraphicsOptimizerSubsystem::ArchiveBenchmarkIfFinished()
     if (!bBenchmarkReportPending || Runner.IsRunning()) return;
     bBenchmarkReportPending = false;
     const FGraphicsBenchmarkOptions& Options = Runner.GetOptions();
-    LatestBenchmarkReport = FString::Printf(
+    LatestBenchmarkReport = FGraphicsOptimizerLocalization::Printf(
         TEXT("Settings benchmark | %s\nTarget %.1f FPS | duration %.1f seconds | static scene %s | tick cap %.1f FPS\nError: %s\nSample counts of zero mean unavailable timing data.\n"),
-        Runner.GetState() == EGraphicsOptimizerState::Completed ? TEXT("completed") : TEXT("stopped"),
-        Options.TargetFPS, Options.MeasurementSeconds, Options.bFreezeGameplay ? TEXT("yes") : TEXT("no"),
+        Runner.GetState() == EGraphicsOptimizerState::Completed ? GOTEXT("completed") : GOTEXT("stopped"),
+        Options.TargetFPS, Options.MeasurementSeconds, Options.bFreezeGameplay ? GOTEXT("yes") : GOTEXT("no"),
         Runner.GetFrameRateCapFPS(), *Runner.GetLastError());
     LatestBenchmarkReport += BenchmarkReportContext;
     for (const FGraphicsExperimentResult& Result : Runner.GetResults())
     {
         const FGraphicsPerformanceSummary& P = Result.Performance;
         const Scalability::FQualityLevels& Q = Result.AppliedConfiguration;
-        LatestBenchmarkReport += FString::Printf(
+        LatestBenchmarkReport += FGraphicsOptimizerLocalization::Printf(
             TEXT("#%d %s | FPS %.2f (%+.2f) | 1%% low %.2f | frame %.2f ms | game %.2f ms (%d) | render %.2f ms (%d) | render critical %.2f ms (%d) | GPU %.2f ms (%d) | frames %d | target %s\n  resolution %.1f (0=project default), observed %.1f%%, shadow %d, GI %d, reflection %d, post %d, texture %d, effects %d\n  stat unit (%d): Frame %.2f | Game %.2f | Draw %.2f | GPU %.2f ms\n"),
             Result.ExperimentNumber, *Result.Label, P.AverageFPS, Result.FPSDifference,
             P.OnePercentLowFPS, P.AverageFrameMS, P.AverageGameMS, P.GameSamples,
             P.AverageRenderMS, P.RenderSamples, P.AverageRenderCriticalMS, P.RenderCriticalSamples,
             P.AverageGPUMS, P.GPUSamples, P.FrameSamples,
-            !Result.bTargetEvaluationValid ? TEXT("inconclusive (cap)") : Result.bMetTargetFPS ? TEXT("met") : TEXT("missed"),
+            !Result.bTargetEvaluationValid ? GOTEXT("inconclusive (cap)") : Result.bMetTargetFPS ? GOTEXT("met") : GOTEXT("missed"),
             Q.ResolutionQuality, Result.ObservedPrimaryResolutionScale, Q.ShadowQuality,
             Q.GlobalIlluminationQuality, Q.ReflectionQuality, Q.PostProcessQuality, Q.TextureQuality, Q.EffectsQuality,
             P.StatUnitSamples, P.StatUnitFrameMS, P.StatUnitGameMS, P.StatUnitRenderMS, P.StatUnitGPUMS);
     }
     for (const FGraphicsValidationResult& Entry : Runner.GetValidationResults())
-        LatestBenchmarkReport += FString::Printf(TEXT("Validation source #%d: median %.2f | range %.2f-%.2f FPS | target %d/%d | stable %s\n"),
+        LatestBenchmarkReport += FGraphicsOptimizerLocalization::Printf(TEXT("Validation source #%d: median %.2f | range %.2f-%.2f FPS | target %d/%d | stable %s\n"),
             Entry.SourceResultIndex, Entry.MedianFPS, Entry.MinimumFPS, Entry.MaximumFPS,
-            Entry.TargetMetRuns, FOptimizationManager::ValidationRunsPerCandidate, Entry.bStableTargetMet ? TEXT("yes") : TEXT("no"));
-    LatestBenchmarkReport += FString::Printf(TEXT("Measured recommendation index: %d\n"), Runner.GetBestResultIndex());
-    ArchiveReport(BenchmarkReportId, TEXT("Settings benchmark"), LatestBenchmarkReport);
+            Entry.TargetMetRuns, FOptimizationManager::ValidationRunsPerCandidate, Entry.bStableTargetMet ? GOTEXT("yes") : GOTEXT("no"));
+    LatestBenchmarkReport += FGraphicsOptimizerLocalization::Printf(TEXT("Measured recommendation index: %d\n"), Runner.GetBestResultIndex());
+    ArchiveReport(BenchmarkReportId, GOTEXT("Settings benchmark"), LatestBenchmarkReport);
 }
 
 bool UGraphicsOptimizerSubsystem::ScanEngineScene()
@@ -152,7 +153,7 @@ bool UGraphicsOptimizerSubsystem::ScanEngineScene()
         IsGpuTraceCaptureRunning() || IsLumenDetailStudyRunning() || IsVisualComparisonRunning() ||
         IsMotionComparisonRunning())
     {
-        LastActionMessage = TEXT("Engine scene scan needs an idle PIE world.");
+        LastActionMessage = GOTEXT("Engine scene scan needs an idle PIE world.");
         return false;
     }
     struct FRepeatedMeshGroup
@@ -237,40 +238,40 @@ bool UGraphicsOptimizerSubsystem::ScanEngineScene()
     {
         return A.Count == B.Count ? A.MeshPath < B.MeshPath : A.Count > B.Count;
     });
-    EngineSceneReport = FString::Printf(
+    EngineSceneReport = FGraphicsOptimizerLocalization::Printf(
         TEXT("Engine scene diagnosis | PIE scan\nVSM risk candidates (not measured cache invalidations): %d shadow-casting lights (%d movable, %d stationary); %d dynamic-shadow static-mesh components (%d movable, %d with a base material connected to WPO).\n"),
         ShadowLights, MovableLights, StationaryLights, DynamicShadowComponents,
         MovableShadowComponents, WPOShadowComponents);
     IConsoleVariable* VSMEnable = IConsoleManager::Get().FindConsoleVariable(TEXT("r.Shadow.Virtual.Enable"));
     IConsoleVariable* VSMCache = IConsoleManager::Get().FindConsoleVariable(TEXT("r.Shadow.Virtual.Cache"));
-    EngineSceneReport += FString::Printf(TEXT("Renderer CVars: VSM enable %s | VSM cache %s. If VSM is disabled, this list is only a shadow-caster inventory.\n"),
-        VSMEnable ? *FString::FromInt(VSMEnable->GetInt()) : TEXT("unavailable"),
-        VSMCache ? *FString::FromInt(VSMCache->GetInt()) : TEXT("unavailable"));
-    for (const FString& Path : LightExamples) EngineSceneReport += TEXT("  light: ") + Path + TEXT("\n");
-    for (const FString& Path : WPOExamples) EngineSceneReport += TEXT("  WPO caster: ") + Path + TEXT("\n");
-    EngineSceneReport += TEXT("These flags identify candidates only. Moving lights/casters or WPO can invalidate VSM pages, but this static scan cannot prove an invalidation or its GPU cost. For manual verification in a moving scene, use the VSM cache visualization and compare GPU traces.\n");
-    EngineSceneReport += FString::Printf(TEXT("\nInstancing candidates: %d static, non-physics components; %d mesh/material groups. Top repeated groups:\n"),
+    EngineSceneReport += FGraphicsOptimizerLocalization::Printf(TEXT("Renderer CVars: VSM enable %s | VSM cache %s. If VSM is disabled, this list is only a shadow-caster inventory.\n"),
+        VSMEnable ? *FString::FromInt(VSMEnable->GetInt()) : GOTEXT("unavailable"),
+        VSMCache ? *FString::FromInt(VSMCache->GetInt()) : GOTEXT("unavailable"));
+    for (const FString& Path : LightExamples) EngineSceneReport += GOTEXT("  light: ") + Path + TEXT("\n");
+    for (const FString& Path : WPOExamples) EngineSceneReport += GOTEXT("  WPO caster: ") + Path + TEXT("\n");
+    EngineSceneReport += GOTEXT("These flags identify candidates only. Moving lights/casters or WPO can invalidate VSM pages, but this static scan cannot prove an invalidation or its GPU cost. For manual verification in a moving scene, use the VSM cache visualization and compare GPU traces.\n");
+    EngineSceneReport += FGraphicsOptimizerLocalization::Printf(TEXT("\nInstancing candidates: %d static, non-physics components; %d mesh/material groups. Top repeated groups:\n"),
         RepeatedEligibleComponents, Groups.Num());
     int32 Listed = 0;
     for (const FRepeatedMeshGroup& Group : Groups)
     {
         if (Group.Count < 2 || Listed >= 10) break;
-        EngineSceneReport += FString::Printf(TEXT("  %d components | %s | material signature %s\n"),
+        EngineSceneReport += FGraphicsOptimizerLocalization::Printf(TEXT("  %d components | %s | material signature %s\n"),
             Group.Count, *Group.MeshPath, *Group.Key);
         ++Listed;
     }
-    if (Listed == 0) EngineSceneReport += TEXT("  No repeated static mesh/material group found.\n");
-    EngineSceneReport += TEXT("ISM/HISM conversion is not performed. Review transforms, collision, per-actor logic, lighting and Nanite use before any conversion; count is not a draw-call or FPS measurement.\n");
+    if (Listed == 0) EngineSceneReport += GOTEXT("  No repeated static mesh/material group found.\n");
+    EngineSceneReport += GOTEXT("ISM/HISM conversion is not performed. Review transforms, collision, per-actor logic, lighting and Nanite use before any conversion; count is not a draw-call or FPS measurement.\n");
     const FString SceneReportDirectory = IsFullAnalysisRunning() && !FullAnalysisDirectory.IsEmpty()
         ? FullAnalysisDirectory
         : FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectSavedDir(),
             TEXT("GraphicsOptimizer"), TEXT("SceneDiagnostics")));
     IFileManager::Get().MakeDirectory(*SceneReportDirectory, true);
-    EngineSceneReport += TEXT("Report: ") + FPaths::Combine(SceneReportDirectory, TEXT("EngineSceneReport.txt")) + TEXT("\n");
+    EngineSceneReport += GOTEXT("Report: ") + FPaths::Combine(SceneReportDirectory, TEXT("EngineSceneReport.txt")) + TEXT("\n");
     FFileHelper::SaveStringToFile(EngineSceneReport,
         *FPaths::Combine(SceneReportDirectory, TEXT("EngineSceneReport.txt")));
-    ArchiveReport(TEXT("Scene:") + SceneReportDirectory, TEXT("Engine scene diagnosis"), EngineSceneReport);
-    LastActionMessage = TEXT("Engine scene scan completed: VSM risk and instancing candidates recorded.");
+    ArchiveReport(TEXT("Scene:") + SceneReportDirectory, GOTEXT("Engine scene diagnosis"), EngineSceneReport);
+    LastActionMessage = GOTEXT("Engine scene scan completed: VSM risk and instancing candidates recorded.");
     UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][EngineScene] %s\n%s"), *LastActionMessage, *EngineSceneReport);
     return true;
 }
@@ -285,32 +286,32 @@ bool UGraphicsOptimizerSubsystem::StartLumenDetailStudy(float MeasurementSeconds
         Runner.IsRunning() || IsGpuTraceCaptureRunning() || IsShadowStudyRunning() ||
         IsVisualComparisonRunning() || IsMotionComparisonRunning() || IsLumenDetailStudyRunning())
     {
-        LastActionMessage = TEXT("Lumen study needs an idle, focused PIE viewport and a player camera.");
+        LastActionMessage = GOTEXT("Lumen study needs an idle, focused PIE viewport and a player camera.");
         return false;
     }
     IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.Lumen.ScreenProbeGather.DownsampleFactor"));
     if (!CVar)
     {
-        LastActionMessage = TEXT("UE did not expose the Lumen screen-probe downsample CVar.");
+        LastActionMessage = GOTEXT("UE did not expose the Lumen screen-probe downsample CVar.");
         return false;
     }
     const int32 Original = CVar->GetInt();
     if (Original < 4 || Original >= 64 || (CVar->GetFlags() & ECVF_SetByMask) > ECVF_SetByCode)
     {
-        LastActionMessage = TEXT("Lumen study skipped: the original factor is outside the effective 4-63 range or has higher-priority CVar control.");
+        LastActionMessage = GOTEXT("Lumen study skipped: the original factor is outside the effective 4-63 range or has higher-priority CVar control.");
         return false;
     }
     const FIntPoint Size = Viewport->GetSizeXY();
     if (Size.X <= 0 || Size.Y <= 0 || static_cast<int64>(Size.X) * Size.Y > 16000000)
     {
-        LastActionMessage = TEXT("Lumen study viewport is invalid or exceeds 16 million pixels.");
+        LastActionMessage = GOTEXT("Lumen study viewport is invalid or exceeds 16 million pixels.");
         return false;
     }
     bLumenStudyPausedWorld = !World->IsPaused();
     if (bLumenStudyPausedWorld && !UGameplayStatics::SetGamePaused(World, true))
     {
         bLumenStudyPausedWorld = false;
-        LastActionMessage = TEXT("Could not pause gameplay for Lumen A/B.");
+        LastActionMessage = GOTEXT("Could not pause gameplay for Lumen A/B.");
         return false;
     }
     LumenStudyWorld = World;
@@ -339,12 +340,12 @@ bool UGraphicsOptimizerSubsystem::StartLumenDetailStudy(float MeasurementSeconds
         LumenStudyWorld.Reset();
         LumenStudyViewport.Reset();
         LumenStudyCVar = nullptr;
-        LastActionMessage = TEXT("Could not create Lumen A/B output directory.");
+        LastActionMessage = GOTEXT("Could not create Lumen A/B output directory.");
         return false;
     }
     LumenStudyStage = ELumenStudyStage::BaselineWarmup;
     LumenStudyBenchmark.BeginWarmup(1.0f);
-    LastActionMessage = FString::Printf(TEXT("Lumen A/B started: screen-probe downsample factor %d vs %d."),
+    LastActionMessage = FGraphicsOptimizerLocalization::Printf(TEXT("Lumen A/B started: screen-probe downsample factor %d vs %d."),
         LumenStudyOriginalFactor, LumenStudyCandidateFactor);
     UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][Lumen] %s"), *LastActionMessage);
     return true;
@@ -399,7 +400,7 @@ void UGraphicsOptimizerSubsystem::TickLumenDetailStudy()
         FVector::DistSquared(LumenStudyCameraLocation, Camera->GetCameraLocation()) > 1.0f ||
         !LumenStudyCameraRotation.Equals(Camera->GetCameraRotation(), 0.1f))
     {
-        FinishLumenDetailStudy(false, TEXT("Lumen A/B stopped: focus, camera, pause state, viewport, quality, or CVar changed."));
+        FinishLumenDetailStudy(false, GOTEXT("Lumen A/B stopped: focus, camera, pause state, viewport, quality, or CVar changed."));
         return;
     }
     if (LumenStudyStage == ELumenStudyStage::BaselineWarmup || LumenStudyStage == ELumenStudyStage::CandidateWarmup)
@@ -417,7 +418,7 @@ void UGraphicsOptimizerSubsystem::TickLumenDetailStudy()
     const FGraphicsPerformanceSummary Summary = LumenStudyBenchmark.FinishMeasurement();
     if (Summary.FrameSamples < 30 || Summary.GPUSamples < 30)
     {
-        FinishLumenDetailStudy(false, TEXT("Lumen A/B had fewer than 30 frame or GPU samples."));
+        FinishLumenDetailStudy(false, GOTEXT("Lumen A/B had fewer than 30 frame or GPU samples."));
         return;
     }
     if (LumenStudyStage == ELumenStudyStage::BaselineMeasure)
@@ -425,13 +426,13 @@ void UGraphicsOptimizerSubsystem::TickLumenDetailStudy()
         LumenBaselinePerformance = Summary;
         if (!CaptureLumenDetailImage(true))
         {
-            FinishLumenDetailStudy(false, TEXT("Could not save a visible Lumen baseline image."));
+            FinishLumenDetailStudy(false, GOTEXT("Could not save a visible Lumen baseline image."));
             return;
         }
         LumenStudyCVar->Set(LumenStudyCandidateFactor, ECVF_SetByCode, FName(TEXT("GraphicsOptimizerLumenStudy")));
         if (LumenStudyCVar->GetInt() != LumenStudyCandidateFactor)
         {
-            FinishLumenDetailStudy(false, TEXT("Could not apply the Lumen candidate factor."));
+            FinishLumenDetailStudy(false, GOTEXT("Could not apply the Lumen candidate factor."));
             return;
         }
         LumenStudyStage = ELumenStudyStage::CandidateWarmup;
@@ -440,7 +441,7 @@ void UGraphicsOptimizerSubsystem::TickLumenDetailStudy()
     }
     LumenCandidatePerformance = Summary;
     FinishLumenDetailStudy(CaptureLumenDetailImage(false),
-        TEXT("Lumen screen-probe detail A/B completed."));
+        GOTEXT("Lumen screen-probe detail A/B completed."));
 }
 
 void UGraphicsOptimizerSubsystem::FinishLumenDetailStudy(bool bSuccess, const FString& Reason)
@@ -457,9 +458,9 @@ void UGraphicsOptimizerSubsystem::FinishLumenDetailStudy(bool bSuccess, const FS
         if (UWorld* World = LumenStudyWorld.Get())
             bSuccess = UGameplayStatics::SetGamePaused(World, false) && bSuccess;
     bLumenStudyCompleted = bSuccess;
-    LumenStudyReport = FString::Printf(
+    LumenStudyReport = FGraphicsOptimizerLocalization::Printf(
         TEXT("Lumen screen-probe detail A/B | %s\nCVar: r.Lumen.ScreenProbeGather.DownsampleFactor (%d baseline -> %d candidate; larger tiles can mean fewer probes; renderer may clamp the effective factor).\nBaseline: %.2f FPS | 1%% low %.2f FPS | GPU %.2f ms (%d samples)\nCandidate: %.2f FPS | 1%% low %.2f FPS | GPU %.2f ms (%d samples)\nChange: FPS %+.2f | GPU %+.2f ms\nImage: %s\nOutput directory: %s\nResult: %s\nOriginal CVar value restored: %s. This changes one Lumen detail control, not the whole GI scalability group. Quality must be judged from the image; this is not automatically applied.\n"),
-        bSuccess ? TEXT("completed") : TEXT("stopped"), LumenStudyOriginalFactor, LumenStudyCandidateFactor,
+        bSuccess ? GOTEXT("completed") : GOTEXT("stopped"), LumenStudyOriginalFactor, LumenStudyCandidateFactor,
         LumenBaselinePerformance.AverageFPS, LumenBaselinePerformance.OnePercentLowFPS,
         LumenBaselinePerformance.AverageGPUMS, LumenBaselinePerformance.GPUSamples,
         LumenCandidatePerformance.AverageFPS, LumenCandidatePerformance.OnePercentLowFPS,
@@ -467,10 +468,10 @@ void UGraphicsOptimizerSubsystem::FinishLumenDetailStudy(bool bSuccess, const FS
         LumenCandidatePerformance.AverageFPS - LumenBaselinePerformance.AverageFPS,
         LumenCandidatePerformance.AverageGPUMS - LumenBaselinePerformance.AverageGPUMS,
         *LumenStudyImagePath, *LumenStudyDirectory, *Reason,
-        LumenStudyCVar && LumenStudyCVar->GetInt() == LumenStudyOriginalFactor ? TEXT("yes") : TEXT("NO"));
+        LumenStudyCVar && LumenStudyCVar->GetInt() == LumenStudyOriginalFactor ? GOTEXT("yes") : GOTEXT("NO"));
     if (!LumenStudyDirectory.IsEmpty())
         FFileHelper::SaveStringToFile(LumenStudyReport, *FPaths::Combine(LumenStudyDirectory, TEXT("LumenStudyReport.txt")));
-    ArchiveReport(TEXT("Lumen:") + LumenStudyDirectory, TEXT("Lumen detail A/B"), LumenStudyReport);
+    ArchiveReport(TEXT("Lumen:") + LumenStudyDirectory, GOTEXT("Lumen detail A/B"), LumenStudyReport);
     LumenStudyStage = ELumenStudyStage::None;
     LumenStudyWorld.Reset();
     LumenStudyViewport.Reset();
@@ -483,7 +484,7 @@ void UGraphicsOptimizerSubsystem::FinishLumenDetailStudy(bool bSuccess, const FS
 
 void UGraphicsOptimizerSubsystem::CancelLumenDetailStudy()
 {
-    if (IsLumenDetailStudyRunning()) FinishLumenDetailStudy(false, TEXT("Lumen A/B cancelled."));
+    if (IsLumenDetailStudyRunning()) FinishLumenDetailStudy(false, GOTEXT("Lumen A/B cancelled."));
 }
 
 void UGraphicsOptimizerSubsystem::EnsureResolutionProbe()
@@ -582,11 +583,11 @@ bool UGraphicsOptimizerSubsystem::StartBenchmark(const FGraphicsBenchmarkOptions
         BenchmarkReportId = TEXT("Settings:") + FGuid::NewGuid().ToString(EGuidFormats::Digits);
         LatestBenchmarkReport.Empty();
         bBenchmarkReportPending = true;
-        BenchmarkReportContext = FString::Printf(TEXT("Run identity: %s\nScene: %s | started: %s\n"),
+        BenchmarkReportContext = FGraphicsOptimizerLocalization::Printf(TEXT("Run identity: %s\nScene: %s | started: %s\n"),
             *BenchmarkReportId, *World->GetMapName(), *FDateTime::Now().ToString(TEXT("%Y-%m-%d %H:%M:%S")));
         if (APlayerCameraManager* Camera = UGameplayStatics::GetPlayerCameraManager(World, 0))
-            BenchmarkReportContext += TEXT("Camera at start: ") + Camera->GetCameraLocation().ToCompactString()
-                + TEXT(" / ") + Camera->GetCameraRotation().ToCompactString() + TEXT("\n");
+            BenchmarkReportContext += GOTEXT("Camera at start: ") + Camera->GetCameraLocation().ToCompactString()
+                + GOTEXT(" / ") + Camera->GetCameraRotation().ToCompactString() + TEXT("\n");
         FullAnalysisStage = EFullAnalysisStage::None;
         FullAnalysisReport.Empty();
         ComparisonImagePath.Empty();
@@ -632,7 +633,7 @@ bool UGraphicsOptimizerSubsystem::StartFullAnalysis(const FGraphicsBenchmarkOpti
     LumenStudyReport.Empty();
     GpuTraceReport.Empty();
     GpuPassStudyTraces.Reset();
-    FullAnalysisDecision = TEXT("Pending: original settings retained until you choose Apply Recommended or Keep Original.");
+    FullAnalysisDecision = GOTEXT("Pending: original settings retained until you choose Apply Recommended or Keep Original.");
     FullAnalysisDirectory = FPaths::ConvertRelativePathToFull(FPaths::Combine(
         FPaths::ProjectSavedDir(), TEXT("GraphicsOptimizer"), TEXT("FullAnalyses"),
         FDateTime::Now().ToString(TEXT("%Y%m%d-%H%M%S")) + TEXT("-") + FGuid::NewGuid().ToString(EGuidFormats::Digits).Left(8)));
@@ -640,7 +641,7 @@ bool UGraphicsOptimizerSubsystem::StartFullAnalysis(const FGraphicsBenchmarkOpti
     FullAnalysisReport.Empty();
     FullAnalysisOutcome.Empty();
     FullAnalysisStage = EFullAnalysisStage::Benchmark;
-    LastActionMessage = TEXT("Full analysis started: optimization, GPU pass A/B, shadow-caster study, and final image comparison will run in sequence.");
+    LastActionMessage = GOTEXT("Full analysis started: optimization, GPU pass A/B, shadow-caster study, and final image comparison will run in sequence.");
     UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][FullAnalysis] %s"), *LastActionMessage);
     return true;
 }
@@ -649,15 +650,15 @@ FString UGraphicsOptimizerSubsystem::GetFullAnalysisProgress() const
 {
     switch (FullAnalysisStage)
     {
-    case EFullAnalysisStage::Benchmark: return TEXT("1/5: Measuring graphics configurations and validating the candidate.");
-    case EFullAnalysisStage::GpuPasses: return TEXT("2/5: Capturing baseline, GI, and Shadow GPU pass traces.");
-    case EFullAnalysisStage::Shadow: return FString::Printf(TEXT("3/5: Testing shadow-caster mesh group %d/%d."),
+    case EFullAnalysisStage::Benchmark: return GOTEXT("1/5: Measuring graphics configurations and validating the candidate.");
+    case EFullAnalysisStage::GpuPasses: return GOTEXT("2/5: Capturing baseline, GI, and Shadow GPU pass traces.");
+    case EFullAnalysisStage::Shadow: return FGraphicsOptimizerLocalization::Printf(TEXT("3/5: Testing shadow-caster mesh group %d/%d."),
         FullAnalysisShadowIndex + 1, FullAnalysisShadowLimit);
-    case EFullAnalysisStage::Lumen: return TEXT("4/5: Testing a Lumen screen-probe detail control.");
-    case EFullAnalysisStage::Visual: return TEXT("5/5: Capturing baseline and recommended-setting images.");
-    case EFullAnalysisStage::Complete: return TEXT("Completed. Review the comparisons and choose Apply or Keep Original.");
-    case EFullAnalysisStage::Failed: return TEXT("Stopped. Review the partial report and the last action message.");
-    default: return TEXT("No full analysis in progress.");
+    case EFullAnalysisStage::Lumen: return GOTEXT("4/5: Testing a Lumen screen-probe detail control.");
+    case EFullAnalysisStage::Visual: return GOTEXT("5/5: Capturing baseline and recommended-setting images.");
+    case EFullAnalysisStage::Complete: return GOTEXT("Completed. Review the comparisons and choose Apply or Keep Original.");
+    case EFullAnalysisStage::Failed: return GOTEXT("Stopped. Review the partial report and the last action message.");
+    default: return GOTEXT("No full analysis in progress.");
     }
 }
 
@@ -666,7 +667,7 @@ bool UGraphicsOptimizerSubsystem::ApplyConfiguration(const Scalability::FQuality
     UWorld* World = GetGameInstance() ? GetGameInstance()->GetWorld() : nullptr;
     if (!World || !World->IsGameWorld() || Runner.IsRunning() || IsVisualComparisonRunning() || IsMotionComparisonRunning() || IsShadowStudyRunning() || IsGpuTraceCaptureRunning() || IsLumenDetailStudyRunning())
     {
-        LastActionMessage = TEXT("Apply requires an active PIE/game world and a completed benchmark.");
+        LastActionMessage = GOTEXT("Apply requires an active PIE/game world and a completed benchmark.");
         return false;
     }
     const Scalability::FQualityLevels Current = Scalability::GetQualityLevels();
@@ -674,13 +675,13 @@ bool UGraphicsOptimizerSubsystem::ApplyConfiguration(const Scalability::FQuality
     if (Scalability::GetQualityLevels() != Configuration)
     {
         Scalability::SetQualityLevels(Current);
-        LastActionMessage = TEXT("Could not apply the selected scalability configuration exactly.");
+        LastActionMessage = GOTEXT("Could not apply the selected scalability configuration exactly.");
         UE_LOG(LogGraphicsOptimizer, Error, TEXT("[GraphicsOptimizer][Apply] %s"), *LastActionMessage);
         return false;
     }
     if (!bHasAppliedConfiguration) OriginalBeforeApply = Current;
     bHasAppliedConfiguration = true;
-    LastActionMessage = FString::Printf(TEXT("Applied in this PIE/game session: %s. Restore is available; no preset was saved."), *Label);
+    LastActionMessage = FGraphicsOptimizerLocalization::Printf(TEXT("Applied in this PIE/game session: %s. Restore is available; no preset was saved."), *Label);
     UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][Apply] %s"), *LastActionMessage);
     return true;
 }
@@ -689,7 +690,7 @@ bool UGraphicsOptimizerSubsystem::ApplyResult(int32 ResultIndex)
 {
     if (Runner.GetState() != EGraphicsOptimizerState::Completed || !Runner.GetResults().IsValidIndex(ResultIndex))
     {
-        LastActionMessage = TEXT("Choose a result from a completed run before applying it.");
+        LastActionMessage = GOTEXT("Choose a result from a completed run before applying it.");
         return false;
     }
     const FGraphicsExperimentResult& Result = Runner.GetResults()[ResultIndex];
@@ -700,17 +701,17 @@ bool UGraphicsOptimizerSubsystem::SaveResultPreset(int32 ResultIndex)
 {
     if (Runner.GetState() != EGraphicsOptimizerState::Completed || !Runner.GetResults().IsValidIndex(ResultIndex))
     {
-        LastActionMessage = TEXT("Choose a result from a completed run before saving it.");
+        LastActionMessage = GOTEXT("Choose a result from a completed run before saving it.");
         return false;
     }
     const FGraphicsExperimentResult& Result = Runner.GetResults()[ResultIndex];
     if (!FGraphicsPresetManager::Save(Result.AppliedConfiguration))
     {
-        LastActionMessage = TEXT("Could not write the selected preset.");
+        LastActionMessage = GOTEXT("Could not write the selected preset.");
         UE_LOG(LogGraphicsOptimizer, Error, TEXT("[GraphicsOptimizer][Preset] %s"), *LastActionMessage);
         return false;
     }
-    LastActionMessage = FString::Printf(TEXT("Saved %s to %s. Saving did not change the current graphics settings."),
+    LastActionMessage = FGraphicsOptimizerLocalization::Printf(TEXT("Saved %s to %s. Saving did not change the current graphics settings."),
         *Result.Label, *FGraphicsPresetManager::GetPath());
     UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][Preset] %s"), *LastActionMessage);
     return true;
@@ -722,7 +723,7 @@ bool UGraphicsOptimizerSubsystem::StartVisualComparison(int32 ResultIndex)
     if (Runner.IsRunning() || IsVisualComparisonRunning() || IsMotionComparisonRunning() || IsShadowStudyRunning() || IsGpuTraceCaptureRunning() || IsLumenDetailStudyRunning() || Runner.GetState() != EGraphicsOptimizerState::Completed ||
         !Runner.GetResults().IsValidIndex(0) || !Runner.GetResults().IsValidIndex(ResultIndex))
     {
-        LastActionMessage = TEXT("Finish a benchmark and select a measured result before capturing A/B images.");
+        LastActionMessage = GOTEXT("Finish a benchmark and select a measured result before capturing A/B images.");
         return false;
     }
     UWorld* World = GetGameInstance() ? GetGameInstance()->GetWorld() : nullptr;
@@ -731,19 +732,19 @@ bool UGraphicsOptimizerSubsystem::StartVisualComparison(int32 ResultIndex)
     APlayerCameraManager* Camera = World ? UGameplayStatics::GetPlayerCameraManager(World, 0) : nullptr;
     if (!World || !World->IsGameWorld() || !Viewport || !Camera || !FApp::HasFocus())
     {
-        LastActionMessage = TEXT("A/B capture needs a focused PIE viewport and a player camera.");
+        LastActionMessage = GOTEXT("A/B capture needs a focused PIE viewport and a player camera.");
         return false;
     }
     const FIntPoint Size = Viewport->GetSizeXY();
     if (Size.X <= 0 || Size.Y <= 0 || static_cast<int64>(Size.X) * Size.Y > 16000000)
     {
-        LastActionMessage = TEXT("PIE viewport size is invalid or too large for A/B capture (maximum 16 million pixels).");
+        LastActionMessage = GOTEXT("PIE viewport size is invalid or too large for A/B capture (maximum 16 million pixels).");
         return false;
     }
     const bool bWasPaused = World->IsPaused();
     if (!bWasPaused && !UGameplayStatics::SetGamePaused(World, true))
     {
-        LastActionMessage = TEXT("Could not pause the scene for matching A/B captures.");
+        LastActionMessage = GOTEXT("Could not pause the scene for matching A/B captures.");
         return false;
     }
 
@@ -772,19 +773,19 @@ bool UGraphicsOptimizerSubsystem::StartVisualComparison(int32 ResultIndex)
     if (!IFileManager::Get().MakeDirectory(*ComparisonDirectory, true))
     {
         ComparisonStage = EComparisonStage::Baseline;
-        FinishVisualComparison(false, TEXT("Could not create the A/B comparison folder."));
+        FinishVisualComparison(false, GOTEXT("Could not create the A/B comparison folder."));
         return false;
     }
     ComparisonStage = EComparisonStage::Baseline;
     Scalability::SetQualityLevels(ComparisonBaseline);
     if (Scalability::GetQualityLevels() != ComparisonBaseline)
     {
-        FinishVisualComparison(false, TEXT("Could not apply the baseline configuration for A/B capture."));
+        FinishVisualComparison(false, GOTEXT("Could not apply the baseline configuration for A/B capture."));
         return false;
     }
     ComparisonStageStartSeconds = FPlatformTime::Seconds();
     ComparisonStageFrames = 0;
-    LastActionMessage = TEXT("Capturing baseline, then selected settings at the same camera. Please keep PIE visible.");
+    LastActionMessage = GOTEXT("Capturing baseline, then selected settings at the same camera. Please keep PIE visible.");
     UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][Comparison] Starting baseline vs result #%d in %s"),
         ResultIndex, *ComparisonDirectory);
     return true;
@@ -828,7 +829,7 @@ void UGraphicsOptimizerSubsystem::TickVisualComparison()
         FVector::DistSquared(ComparisonCameraLocation, Camera->GetCameraLocation()) > 1.0f ||
         !ComparisonCameraRotation.Equals(Camera->GetCameraRotation(), 0.1f))
     {
-        FinishVisualComparison(false, TEXT("A/B capture stopped: viewport, focus, or camera changed."));
+        FinishVisualComparison(false, GOTEXT("A/B capture stopped: viewport, focus, or camera changed."));
         return;
     }
     ++ComparisonStageFrames;
@@ -841,12 +842,12 @@ void UGraphicsOptimizerSubsystem::TickVisualComparison()
         if (!ResolutionProbe.IsValid() || !ResolutionProbe->GetStablePrimaryPercentage(ObservedPrimary))
         {
             if (FPlatformTime::Seconds() - ComparisonStageStartSeconds > 5.0)
-                FinishVisualComparison(false, TEXT("A/B capture stopped: primary resolution could not be verified."));
+                FinishVisualComparison(false, GOTEXT("A/B capture stopped: primary resolution could not be verified."));
             return;
         }
         if (FMath::Abs(ObservedPrimary - ExpectedPrimary) > 1.0f)
         {
-            FinishVisualComparison(false, TEXT("A/B capture stopped: observed primary resolution differs from the benchmark result."));
+            FinishVisualComparison(false, GOTEXT("A/B capture stopped: observed primary resolution differs from the benchmark result."));
             return;
         }
     }
@@ -854,7 +855,7 @@ void UGraphicsOptimizerSubsystem::TickVisualComparison()
     TArray<FColor> Pixels;
     if (!Viewport->ReadPixels(Pixels) || Pixels.Num() != static_cast<int64>(ComparisonSize.X) * ComparisonSize.Y)
     {
-        FinishVisualComparison(false, TEXT("Could not read the PIE viewport pixels."));
+        FinishVisualComparison(false, GOTEXT("Could not read the PIE viewport pixels."));
         return;
     }
     const TCHAR* CaptureName = ComparisonStage == EComparisonStage::Baseline ? TEXT("Baseline") : TEXT("Selected");
@@ -871,14 +872,14 @@ void UGraphicsOptimizerSubsystem::TickVisualComparison()
         // PIE readback can carry valid RGB with alpha=0; PNG viewers composite that as black.
         Pixel.A = 255;
     }
-    const FString PixelDiagnostics = FString::Printf(
+    const FString PixelDiagnostics = FGraphicsOptimizerLocalization::Printf(
         TEXT("%s: %dx%d, %d pixels, raw zero-alpha %d, visible-RGB %d, mean RGB %.1f/255, saved alpha 255"),
-        CaptureName, ComparisonSize.X, ComparisonSize.Y, SampleCount, ZeroAlphaSamples,
+        GOTR(CaptureName), ComparisonSize.X, ComparisonSize.Y, SampleCount, ZeroAlphaSamples,
         NonBlackSamples, SampleCount > 0 ? static_cast<double>(RGBSum) / (SampleCount * 3) : 0.0);
     UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][Comparison] %s"), *PixelDiagnostics);
     if (NonBlackSamples == 0)
     {
-        FinishVisualComparison(false, FString::Printf(TEXT("A/B capture stopped: %s contained no visible RGB pixels."), CaptureName));
+        FinishVisualComparison(false, FGraphicsOptimizerLocalization::Printf(TEXT("A/B capture stopped: %s contained no visible RGB pixels."), GOTR(CaptureName)));
         return;
     }
     if (ComparisonStage == EComparisonStage::Baseline) ComparisonBaselinePixelDiagnostics = PixelDiagnostics;
@@ -889,24 +890,24 @@ void UGraphicsOptimizerSubsystem::TickVisualComparison()
         if (!SaveComparisonImage(FPaths::Combine(ComparisonDirectory, TEXT("Baseline.png")),
             ComparisonBaselinePixels, ComparisonSize))
         {
-            FinishVisualComparison(false, TEXT("Could not save Baseline.png."));
+            FinishVisualComparison(false, GOTEXT("Could not save Baseline.png."));
             return;
         }
         ComparisonStage = EComparisonStage::Selected;
         Scalability::SetQualityLevels(ComparisonSelected);
         if (Scalability::GetQualityLevels() != ComparisonSelected)
         {
-            FinishVisualComparison(false, TEXT("Could not apply the selected configuration for A/B capture."));
+            FinishVisualComparison(false, GOTEXT("Could not apply the selected configuration for A/B capture."));
             return;
         }
         ComparisonStageStartSeconds = FPlatformTime::Seconds();
         ComparisonStageFrames = 0;
-        LastActionMessage = TEXT("Baseline saved; capturing the selected settings at the same camera.");
+        LastActionMessage = GOTEXT("Baseline saved; capturing the selected settings at the same camera.");
         return;
     }
     if (!SaveComparisonImage(FPaths::Combine(ComparisonDirectory, TEXT("Selected.png")), Pixels, ComparisonSize))
     {
-        FinishVisualComparison(false, TEXT("Could not save Selected.png."));
+        FinishVisualComparison(false, GOTEXT("Could not save Selected.png."));
         return;
     }
     const int32 Width = ComparisonSize.X;
@@ -923,10 +924,10 @@ void UGraphicsOptimizerSubsystem::TickVisualComparison()
     const FString CombinedPath = FPaths::Combine(ComparisonDirectory, TEXT("SideBySide.png"));
     if (!SaveComparisonImage(CombinedPath, SideBySide, FIntPoint(Width * 2, Height)))
     {
-        FinishVisualComparison(false, TEXT("Could not save SideBySide.png."));
+        FinishVisualComparison(false, GOTEXT("Could not save SideBySide.png."));
         return;
     }
-    const FString Notes = FString::Printf(
+    const FString Notes = FGraphicsOptimizerLocalization::Printf(
         TEXT("Left: baseline (#0)\nRight: selected result (#%d): %s\nBaseline: resolution %.1f, shadow %d, GI %d, reflection %d, post %d, texture %d, effects %d\nSelected: resolution %.1f, shadow %d, GI %d, reflection %d, post %d, texture %d, effects %d\nCamera location: %s\nCamera rotation: %s\nViewport: %d x %d\nPixel diagnostics before alpha correction:\n%s\n%s\nResolution 0 means project default. Captures are static PIE frames after a one-second settle; they are not an image-quality score.\n"),
         ComparisonResultIndex, *Runner.GetResults()[ComparisonResultIndex].Label,
         ComparisonBaseline.ResolutionQuality, ComparisonBaseline.ShadowQuality,
@@ -939,7 +940,7 @@ void UGraphicsOptimizerSubsystem::TickVisualComparison()
         *ComparisonBaselinePixelDiagnostics, *ComparisonSelectedPixelDiagnostics);
     FFileHelper::SaveStringToFile(Notes, *FPaths::Combine(ComparisonDirectory, TEXT("Comparison.txt")));
     ComparisonImagePath = CombinedPath;
-    FinishVisualComparison(true, TEXT("A/B images saved. Left is baseline; right is selected. Open the image for full-size inspection."));
+    FinishVisualComparison(true, GOTEXT("A/B images saved. Left is baseline; right is selected. Open the image for full-size inspection."));
 }
 
 void UGraphicsOptimizerSubsystem::FinishVisualComparison(bool bSuccess, const FString& Message)
@@ -962,19 +963,19 @@ void UGraphicsOptimizerSubsystem::FinishVisualComparison(bool bSuccess, const FS
     bComparisonPausedWorld = false;
     bComparisonStatUnitWasEnabled = false;
     if (!bSuccess) ComparisonImagePath.Empty();
-    LastActionMessage = bRestored ? Message : Message + TEXT(" WARNING: pre-capture graphics settings could not be restored exactly.");
+    LastActionMessage = bRestored ? Message : Message + GOTEXT(" WARNING: pre-capture graphics settings could not be restored exactly.");
     FString ImageReport;
     FFileHelper::LoadFileToString(ImageReport, *FPaths::Combine(ComparisonDirectory, TEXT("Comparison.txt")));
-    ArchiveReport(TEXT("Visual:") + ComparisonDirectory, TEXT("Still image comparison"),
-        (bSuccess ? FString(TEXT("completed\n")) : FString(TEXT("stopped\n"))) + LastActionMessage
-        + TEXT("\nImage: ") + ComparisonImagePath + TEXT("\n") + ImageReport);
+    ArchiveReport(TEXT("Visual:") + ComparisonDirectory, GOTEXT("Still image comparison"),
+        (bSuccess ? FString(GOTEXT("completed\n")) : FString(GOTEXT("stopped\n"))) + LastActionMessage
+        + GOTEXT("\nImage: ") + ComparisonImagePath + TEXT("\n") + ImageReport);
     UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][Comparison] %s%s"),
         bSuccess ? TEXT("Completed: ") : TEXT("Stopped: "), *LastActionMessage);
 }
 
 void UGraphicsOptimizerSubsystem::CancelVisualComparison()
 {
-    if (IsVisualComparisonRunning()) FinishVisualComparison(false, TEXT("A/B capture cancelled."));
+    if (IsVisualComparisonRunning()) FinishVisualComparison(false, GOTEXT("A/B capture cancelled."));
 }
 
 bool UGraphicsOptimizerSubsystem::StartMotionComparison(int32 ResultIndex)
@@ -984,7 +985,7 @@ bool UGraphicsOptimizerSubsystem::StartMotionComparison(int32 ResultIndex)
         Runner.GetState() != EGraphicsOptimizerState::Completed ||
         !Runner.GetResults().IsValidIndex(0) || !Runner.GetResults().IsValidIndex(ResultIndex))
     {
-        LastActionMessage = TEXT("Finish optimization and select a measured result before motion comparison.");
+        LastActionMessage = GOTEXT("Finish optimization and select a measured result before motion comparison.");
         return false;
     }
     UWorld* World = GetGameInstance() ? GetGameInstance()->GetWorld() : nullptr;
@@ -994,13 +995,13 @@ bool UGraphicsOptimizerSubsystem::StartMotionComparison(int32 ResultIndex)
     FViewport* Viewport = ViewportClient ? ViewportClient->Viewport : nullptr;
     if (!World || !World->IsGameWorld() || World->IsPaused() || !Viewport || !Controller || !Pawn || !FApp::HasFocus())
     {
-        LastActionMessage = TEXT("Motion comparison needs unpaused, focused PIE with a possessed character and visible viewport.");
+        LastActionMessage = GOTEXT("Motion comparison needs unpaused, focused PIE with a possessed character and visible viewport.");
         return false;
     }
     MotionSize = Viewport->GetSizeXY();
     if (MotionSize.X <= 0 || MotionSize.Y <= 0 || static_cast<int64>(MotionSize.X) * MotionSize.Y > 2100000)
     {
-        LastActionMessage = TEXT("Resize the PIE viewport to at most 2.1 million pixels before recording the motion video.");
+        LastActionMessage = GOTEXT("Resize the PIE viewport to at most 2.1 million pixels before recording the motion video.");
         return false;
     }
     MotionWorld = World;
@@ -1022,14 +1023,14 @@ bool UGraphicsOptimizerSubsystem::StartMotionComparison(int32 ResultIndex)
         FDateTime::Now().ToString(TEXT("%Y%m%d-%H%M%S")) + TEXT("-") + FGuid::NewGuid().ToString(EGuidFormats::Digits).Left(8)));
     if (!IFileManager::Get().MakeDirectory(*MotionDirectory, true))
     {
-        LastActionMessage = TEXT("Could not create the motion comparison folder.");
+        LastActionMessage = GOTEXT("Could not create the motion comparison folder.");
         return false;
     }
     bMotionStatUnitWasEnabled = ViewportClient->IsStatEnabled(TEXT("Unit"));
     if (!bMotionStatUnitWasEnabled) GEngine->SetEngineStat(World, ViewportClient, TEXT("Unit"), true);
     BeginMotionStage(EMotionStage::BaselinePerformance);
     if (!IsMotionComparisonRunning()) return false;
-    LastActionMessage = TEXT("Motion comparison: 4-second D/A movement under each setting, then video capture. Keep PIE visible.");
+    LastActionMessage = GOTEXT("Motion comparison: 4-second D/A movement under each setting, then video capture. Keep PIE visible.");
     UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][Motion] Started result #%d; output %s"),
         ResultIndex, *MotionDirectory);
     return true;
@@ -1060,7 +1061,7 @@ void UGraphicsOptimizerSubsystem::BeginMotionStage(EMotionStage NextStage)
     UWorld* World = MotionWorld.Get();
     if (!Controller || !Pawn || !World)
     {
-        FinishMotionComparison(false, TEXT("Character or world disappeared during motion comparison."));
+        FinishMotionComparison(false, GOTEXT("Character or world disappeared during motion comparison."));
         return;
     }
     MotionStage = NextStage;
@@ -1068,7 +1069,7 @@ void UGraphicsOptimizerSubsystem::BeginMotionStage(EMotionStage NextStage)
     Scalability::SetQualityLevels(bSelected ? MotionSelected : MotionBaseline);
     if (Scalability::GetQualityLevels() != (bSelected ? MotionSelected : MotionBaseline))
     {
-        FinishMotionComparison(false, TEXT("Could not apply the requested motion comparison settings."));
+        FinishMotionComparison(false, GOTEXT("Could not apply the requested motion comparison settings."));
         return;
     }
     if (ACharacter* Character = Cast<ACharacter>(Pawn))
@@ -1077,7 +1078,7 @@ void UGraphicsOptimizerSubsystem::BeginMotionStage(EMotionStage NextStage)
     Controller->SetControlRotation(MotionStartControlRotation);
     if (FVector::DistSquared(Pawn->GetActorLocation(), MotionStartTransform.GetLocation()) > 4.0f)
     {
-        FinishMotionComparison(false, TEXT("Character could not be reset to the recorded start location."));
+        FinishMotionComparison(false, GOTEXT("Character could not be reset to the recorded start location."));
         return;
     }
     if (NextStage == EMotionStage::BaselinePerformance) MotionBaselinePositions.Add(Pawn->GetActorLocation());
@@ -1134,7 +1135,7 @@ void UGraphicsOptimizerSubsystem::TickMotionComparison()
         Client->Viewport->GetSizeXY() != MotionSize || !Controller || !Pawn ||
         Controller->GetPawn() != Pawn || !FApp::HasFocus())
     {
-        FinishMotionComparison(false, TEXT("Motion comparison stopped: PIE focus, viewport, world, or character changed."));
+        FinishMotionComparison(false, GOTEXT("Motion comparison stopped: PIE focus, viewport, world, or character changed."));
         return;
     }
     const double Now = FPlatformTime::Seconds();
@@ -1156,7 +1157,7 @@ void UGraphicsOptimizerSubsystem::TickMotionComparison()
         const int32 LastFrame = FMath::Clamp(FMath::FloorToInt(Elapsed * 24.0), 0, 95);
         if (MotionFrameIndex <= LastFrame && !SaveMotionFramesThrough(LastFrame))
         {
-            FinishMotionComparison(false, TEXT("Could not read or save a visible motion video frame."));
+            FinishMotionComparison(false, GOTEXT("Could not read or save a visible motion video frame."));
             return;
         }
     }
@@ -1175,7 +1176,7 @@ void UGraphicsOptimizerSubsystem::TickMotionComparison()
         if (MotionBaselinePositions.Num() < 2 ||
             FVector::Dist(MotionBaselinePositions[0], MotionBaselinePositions[1]) < 10.0f)
         {
-            FinishMotionComparison(false, TEXT("A/D input did not move the character at least 10 cm in the first second. Check the active input mapping or starting obstruction."));
+            FinishMotionComparison(false, GOTEXT("A/D input did not move the character at least 10 cm in the first second. Check the active input mapping or starting obstruction."));
             return;
         }
         UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][Motion] Baseline: %.2f FPS, 1%% low %.2f, GPU %.2f ms (%d frames)."),
@@ -1199,7 +1200,7 @@ void UGraphicsOptimizerSubsystem::TickMotionComparison()
     else
     {
         UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][Motion] Selected video: %d/96 PNG frames."), MotionFrameIndex);
-        FinishMotionComparison(true, TEXT("Motion comparison captured."));
+        FinishMotionComparison(true, GOTEXT("Motion comparison captured."));
     }
 }
 
@@ -1224,7 +1225,7 @@ void UGraphicsOptimizerSubsystem::FinishMotionComparison(bool bSuccess, const FS
         for (int32 Index = 0; Index < FMath::Min(MotionBaselinePositions.Num(), MotionSelectedPositions.Num()); ++Index)
             MaxPathDifference = FMath::Max(MaxPathDifference,
                 FVector::Dist(MotionBaselinePositions[Index], MotionSelectedPositions[Index]));
-        MotionReport = FString::Printf(
+        MotionReport = FGraphicsOptimizerLocalization::Printf(
             TEXT("Motion A/B: 4 seconds, D for 2 seconds then A for 2 seconds; 1-second settle per pass.\nResult #%d: %s\nBaseline: %.2f FPS, 1%% low %.2f FPS, frame %.2f ms, GPU %.2f ms (%d frame samples)\nSelected: %.2f FPS, 1%% low %.2f FPS, frame %.2f ms, GPU %.2f ms (%d frame samples)\nSelected - baseline: %+.2f FPS\nMaximum sampled character-path difference: %.1f cm (at 0/1/2/3/4 sec)\nVideo: 24 FPS playback, left baseline/right selected. Overlaid average FPS values come from separate passes without frame recording.\n"),
             MotionResultIndex, *Runner.GetResults()[MotionResultIndex].Label,
             MotionBaselinePerformance.AverageFPS, MotionBaselinePerformance.OnePercentLowFPS,
@@ -1235,15 +1236,15 @@ void UGraphicsOptimizerSubsystem::FinishMotionComparison(bool bSuccess, const FS
             MotionSelectedPerformance.FrameSamples,
             MotionSelectedPerformance.AverageFPS - MotionBaselinePerformance.AverageFPS,
             MaxPathDifference);
-        MotionReport += TEXT("Output directory: ") + MotionDirectory + TEXT("\n");
+        MotionReport += GOTEXT("Output directory: ") + MotionDirectory + TEXT("\n");
         if (MaxPathDifference > 50.0f)
-            MotionReport += TEXT("Warning: character paths differed by more than 50 cm; compare FPS with caution.\n");
+            MotionReport += GOTEXT("Warning: character paths differed by more than 50 cm; compare FPS with caution.\n");
         if (Runner.GetFrameRateCapFPS() > 0.0f)
         {
-            MotionReport += FString::Printf(TEXT("Effective tick cap from optimization: %.1f FPS.\n"),
+            MotionReport += FGraphicsOptimizerLocalization::Printf(TEXT("Effective tick cap from optimization: %.1f FPS.\n"),
                 Runner.GetFrameRateCapFPS());
             if (MotionSelectedPerformance.AverageFPS >= Runner.GetFrameRateCapFPS() * 0.98)
-                MotionReport += TEXT("Selected FPS is near the cap; uncapped performance remains unknown.\n");
+                MotionReport += GOTEXT("Selected FPS is near the cap; uncapped performance remains unknown.\n");
         }
         const FString ReportPath = FPaths::Combine(MotionDirectory, TEXT("MotionReport.txt"));
         FFileHelper::SaveStringToFile(MotionReport, *ReportPath);
@@ -1259,8 +1260,8 @@ void UGraphicsOptimizerSubsystem::FinishMotionComparison(bool bSuccess, const FS
         const bool bVideoSaved = bEncoderStarted && ReturnCode == 0 && IFileManager::Get().FileSize(*OutputPath) > 0;
         if (bVideoSaved) MotionVideoPath = OutputPath;
         LastActionMessage = bVideoSaved
-            ? FString::Printf(TEXT("4-second motion A/B saved to %s. FPS report: %s"), *OutputPath, *ReportPath)
-            : FString::Printf(TEXT("Motion FPS and PNG frames saved to %s, but MP4 encoding failed (code %d). ffmpeg.exe must be on PATH. %s"),
+            ? FGraphicsOptimizerLocalization::Printf(TEXT("4-second motion A/B saved to %s. FPS report: %s"), *OutputPath, *ReportPath)
+            : FGraphicsOptimizerLocalization::Printf(TEXT("Motion FPS and PNG frames saved to %s, but MP4 encoding failed (code %d). ffmpeg.exe must be on PATH. %s"),
                 *MotionDirectory, ReturnCode, *StdErr.Right(300));
         if (bVideoSaved)
         {
@@ -1280,7 +1281,7 @@ void UGraphicsOptimizerSubsystem::FinishMotionComparison(bool bSuccess, const FS
     }
     if (!bSettingsRestored)
     {
-        LastActionMessage += TEXT(" WARNING: original graphics settings were not restored exactly.");
+        LastActionMessage += GOTEXT(" WARNING: original graphics settings were not restored exactly.");
         UE_LOG(LogGraphicsOptimizer, Error, TEXT("[GraphicsOptimizer][Motion] Original graphics settings were not restored exactly."));
     }
     MotionWorld.Reset();
@@ -1289,14 +1290,14 @@ void UGraphicsOptimizerSubsystem::FinishMotionComparison(bool bSuccess, const FS
     MotionPawn.Reset();
     MotionHeldDirection = 0;
     bMotionStatUnitWasEnabled = false;
-    ArchiveReport(TEXT("Motion:") + MotionDirectory, TEXT("Motion comparison"),
-        (bSuccess ? FString(TEXT("completed\n")) : FString(TEXT("stopped\n"))) + LastActionMessage
+    ArchiveReport(TEXT("Motion:") + MotionDirectory, GOTEXT("Motion comparison"),
+        (bSuccess ? FString(GOTEXT("completed\n")) : FString(GOTEXT("stopped\n"))) + LastActionMessage
         + TEXT("\n") + MotionReport);
 }
 
 void UGraphicsOptimizerSubsystem::CancelMotionComparison()
 {
-    if (IsMotionComparisonRunning()) FinishMotionComparison(false, TEXT("Motion comparison cancelled."));
+    if (IsMotionComparisonRunning()) FinishMotionComparison(false, GOTEXT("Motion comparison cancelled."));
 }
 
 bool UGraphicsOptimizerSubsystem::ScanShadowCasters()
@@ -1307,7 +1308,7 @@ bool UGraphicsOptimizerSubsystem::ScanShadowCasters()
     if (!World || !World->IsGameWorld() || Runner.IsRunning() || IsVisualComparisonRunning() ||
         IsMotionComparisonRunning() || IsShadowStudyRunning() || IsGpuTraceCaptureRunning() || IsLumenDetailStudyRunning())
     {
-        LastActionMessage = TEXT("Shadow scan needs an idle PIE/game world.");
+        LastActionMessage = GOTEXT("Shadow scan needs an idle PIE/game world.");
         return false;
     }
     TMap<UStaticMesh*, int32> GroupIndices;
@@ -1348,20 +1349,20 @@ bool UGraphicsOptimizerSubsystem::ScanShadowCasters()
             ? A.MeshPath < B.MeshPath : A.Components.Num() > B.Components.Num();
     });
     if (ShadowCandidates.Num() > 20) ShadowCandidates.SetNum(20);
-    ShadowCandidateList = FString::Printf(
+    ShadowCandidateList = FGraphicsOptimizerLocalization::Printf(
         TEXT("Recently rendered dynamic-shadow static-mesh components: %d. Mesh groups found: %d (showing up to 20, sorted by component count, not measured cost).\n"),
         EligibleComponents, GroupIndices.Num());
     for (int32 Index = 0; Index < ShadowCandidates.Num(); ++Index)
     {
         const FShadowCasterGroup& Group = ShadowCandidates[Index];
-        ShadowCandidateList += FString::Printf(
+        ShadowCandidateList += FGraphicsOptimizerLocalization::Printf(
             TEXT("#%d | %d components (static %d, stationary %d, movable %d) | %s\n"),
             Index, Group.Components.Num(), Group.StaticCount, Group.StationaryCount,
             Group.MovableCount, *Group.MeshPath);
     }
     if (ShadowCandidates.IsEmpty())
-        ShadowCandidateList += TEXT("No candidates. Keep the PIE viewport visible on a scene with shadow-casting static meshes, then scan again.\n");
-    LastActionMessage = FString::Printf(TEXT("Shadow scan completed: %d eligible components in %d mesh groups."),
+        ShadowCandidateList += GOTEXT("No candidates. Keep the PIE viewport visible on a scene with shadow-casting static meshes, then scan again.\n");
+    LastActionMessage = FGraphicsOptimizerLocalization::Printf(TEXT("Shadow scan completed: %d eligible components in %d mesh groups."),
         EligibleComponents, GroupIndices.Num());
     UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][ShadowStudy] %s\n%s"),
         *LastActionMessage, *ShadowCandidateList);
@@ -1373,7 +1374,7 @@ bool UGraphicsOptimizerSubsystem::StartShadowStudy(int32 CandidateIndex, float M
     if (Runner.IsRunning() || IsVisualComparisonRunning() || IsMotionComparisonRunning() ||
         IsShadowStudyRunning() || IsGpuTraceCaptureRunning() || IsLumenDetailStudyRunning() || !ShadowCandidates.IsValidIndex(CandidateIndex))
     {
-        LastActionMessage = TEXT("Scan shadow casters, then choose an available group while other experiments are idle.");
+        LastActionMessage = GOTEXT("Scan shadow casters, then choose an available group while other experiments are idle.");
         return false;
     }
     UWorld* World = GetGameInstance() ? GetGameInstance()->GetWorld() : nullptr;
@@ -1382,13 +1383,13 @@ bool UGraphicsOptimizerSubsystem::StartShadowStudy(int32 CandidateIndex, float M
     APlayerCameraManager* Camera = World ? UGameplayStatics::GetPlayerCameraManager(World, 0) : nullptr;
     if (!World || !World->IsGameWorld() || !Viewport || !Camera || !FApp::HasFocus())
     {
-        LastActionMessage = TEXT("Shadow study needs a focused PIE viewport and a player camera.");
+        LastActionMessage = GOTEXT("Shadow study needs a focused PIE viewport and a player camera.");
         return false;
     }
     const FIntPoint Size = Viewport->GetSizeXY();
     if (Size.X <= 0 || Size.Y <= 0 || static_cast<int64>(Size.X) * Size.Y > 16000000)
     {
-        LastActionMessage = TEXT("PIE viewport size is invalid or exceeds 16 million pixels.");
+        LastActionMessage = GOTEXT("PIE viewport size is invalid or exceeds 16 million pixels.");
         return false;
     }
     int32 LiveComponents = 0;
@@ -1400,14 +1401,14 @@ bool UGraphicsOptimizerSubsystem::StartShadowStudy(int32 CandidateIndex, float M
     }
     if (LiveComponents == 0)
     {
-        LastActionMessage = TEXT("The scanned group is no longer present in this PIE world. Scan again.");
+        LastActionMessage = GOTEXT("The scanned group is no longer present in this PIE world. Scan again.");
         return false;
     }
     bShadowPausedWorld = !World->IsPaused();
     if (bShadowPausedWorld && !UGameplayStatics::SetGamePaused(World, true))
     {
         bShadowPausedWorld = false;
-        LastActionMessage = TEXT("Could not pause gameplay for the static shadow study.");
+        LastActionMessage = GOTEXT("Could not pause gameplay for the static shadow study.");
         return false;
     }
     ShadowWorld = World;
@@ -1433,7 +1434,7 @@ bool UGraphicsOptimizerSubsystem::StartShadowStudy(int32 CandidateIndex, float M
     IFileManager::Get().MakeDirectory(*ShadowStudyDirectory, true);
     ShadowStudyStage = EShadowStudyStage::WarmupBaseline;
     ShadowBenchmark.BeginWarmup(1.0f);
-    LastActionMessage = FString::Printf(TEXT("Shadow A/B started for group #%d (%d components). Gameplay paused; original CastShadow flags will be restored."),
+    LastActionMessage = FGraphicsOptimizerLocalization::Printf(TEXT("Shadow A/B started for group #%d (%d components). Gameplay paused; original CastShadow flags will be restored."),
         CandidateIndex, LiveComponents);
     UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][ShadowStudy] %s"), *LastActionMessage);
     return true;
@@ -1493,31 +1494,31 @@ void UGraphicsOptimizerSubsystem::TickShadowStudy()
         !ShadowCameraRotation.Equals(Camera->GetCameraRotation(), 0.1f))
     {
         FString Reasons;
-        if (!World || !World->IsGameWorld()) Reasons += TEXT(" game world unavailable;");
-        if (!Viewport || !Viewport->Viewport) Reasons += TEXT(" viewport unavailable;");
+        if (!World || !World->IsGameWorld()) Reasons += GOTEXT(" game world unavailable;");
+        if (!Viewport || !Viewport->Viewport) Reasons += GOTEXT(" viewport unavailable;");
         else if (Viewport->Viewport->GetSizeXY() != ShadowImageSize)
-            Reasons += FString::Printf(TEXT(" viewport size %dx%d -> %dx%d;"),
+            Reasons += FGraphicsOptimizerLocalization::Printf(TEXT(" viewport size %dx%d -> %dx%d;"),
                 ShadowImageSize.X, ShadowImageSize.Y,
                 Viewport->Viewport->GetSizeXY().X, Viewport->Viewport->GetSizeXY().Y);
-        if (!FApp::HasFocus()) Reasons += TEXT(" application lost focus;");
-        if (World && !World->IsPaused()) Reasons += TEXT(" gameplay unpaused;");
-        if (Scalability::GetQualityLevels() != ShadowOriginalQuality) Reasons += TEXT(" Scalability changed;");
-        if (!Camera) Reasons += TEXT(" camera unavailable;");
+        if (!FApp::HasFocus()) Reasons += GOTEXT(" application lost focus;");
+        if (World && !World->IsPaused()) Reasons += GOTEXT(" gameplay unpaused;");
+        if (Scalability::GetQualityLevels() != ShadowOriginalQuality) Reasons += GOTEXT(" Scalability changed;");
+        if (!Camera) Reasons += GOTEXT(" camera unavailable;");
         else
         {
             if (FVector::DistSquared(ShadowCameraLocation, Camera->GetCameraLocation()) > 1.0f)
-                Reasons += TEXT(" camera position changed;");
+                Reasons += GOTEXT(" camera position changed;");
             if (!ShadowCameraRotation.Equals(Camera->GetCameraRotation(), 0.1f))
-                Reasons += TEXT(" camera rotation changed;");
+                Reasons += GOTEXT(" camera rotation changed;");
         }
-        FinishShadowStudy(false, TEXT("Shadow study stopped:") + Reasons);
+        FinishShadowStudy(false, GOTEXT("Shadow study stopped:") + Reasons);
         return;
     }
     if (ShadowStudyStage == EShadowStudyStage::WarmupBaseline && ShadowBenchmark.IsPeriodComplete())
     {
         ShadowBenchmark.BeginMeasurement(ShadowMeasurementSeconds, Viewport);
         ShadowStudyStage = EShadowStudyStage::MeasuringBaseline;
-        LastActionMessage = TEXT("Shadow A/B: measuring baseline with original shadows.");
+        LastActionMessage = GOTEXT("Shadow A/B: measuring baseline with original shadows.");
         return;
     }
     if (ShadowStudyStage == EShadowStudyStage::MeasuringBaseline)
@@ -1527,12 +1528,12 @@ void UGraphicsOptimizerSubsystem::TickShadowStudy()
         ShadowBaselinePerformance = ShadowBenchmark.FinishMeasurement();
         if (ShadowBaselinePerformance.FrameSamples < 30)
         {
-            FinishShadowStudy(false, TEXT("Baseline had fewer than 30 frame samples."));
+            FinishShadowStudy(false, GOTEXT("Baseline had fewer than 30 frame samples."));
             return;
         }
         if (!CaptureShadowStudyFrame(true))
         {
-            FinishShadowStudy(false, TEXT("Could not save a visible baseline screenshot."));
+            FinishShadowStudy(false, GOTEXT("Could not save a visible baseline screenshot."));
             return;
         }
         for (const TWeakObjectPtr<UStaticMeshComponent>& WeakComponent : ShadowCandidates[ShadowSelectedCandidate].Components)
@@ -1547,12 +1548,12 @@ void UGraphicsOptimizerSubsystem::TickShadowStudy()
         }
         if (ShadowOriginalFlags.IsEmpty())
         {
-            FinishShadowStudy(false, TEXT("No eligible shadow flags remained when the candidate experiment began."));
+            FinishShadowStudy(false, GOTEXT("No eligible shadow flags remained when the candidate experiment began."));
             return;
         }
         ShadowBenchmark.BeginWarmup(1.0f);
         ShadowStudyStage = EShadowStudyStage::WarmupCandidate;
-        LastActionMessage = FString::Printf(TEXT("Baseline %.2f FPS; warming up with CastShadow disabled on %d components."),
+        LastActionMessage = FGraphicsOptimizerLocalization::Printf(TEXT("Baseline %.2f FPS; warming up with CastShadow disabled on %d components."),
             ShadowBaselinePerformance.AverageFPS, ShadowOriginalFlags.Num());
         return;
     }
@@ -1560,7 +1561,7 @@ void UGraphicsOptimizerSubsystem::TickShadowStudy()
     {
         ShadowBenchmark.BeginMeasurement(ShadowMeasurementSeconds, Viewport);
         ShadowStudyStage = EShadowStudyStage::MeasuringCandidate;
-        LastActionMessage = TEXT("Shadow A/B: measuring the selected mesh group with CastShadow disabled.");
+        LastActionMessage = GOTEXT("Shadow A/B: measuring the selected mesh group with CastShadow disabled.");
         return;
     }
     if (ShadowStudyStage == EShadowStudyStage::MeasuringCandidate)
@@ -1570,15 +1571,15 @@ void UGraphicsOptimizerSubsystem::TickShadowStudy()
         ShadowCandidatePerformance = ShadowBenchmark.FinishMeasurement();
         if (ShadowCandidatePerformance.FrameSamples < 30)
         {
-            FinishShadowStudy(false, TEXT("Shadow candidate had fewer than 30 frame samples."));
+            FinishShadowStudy(false, GOTEXT("Shadow candidate had fewer than 30 frame samples."));
             return;
         }
         if (!CaptureShadowStudyFrame(false))
         {
-            FinishShadowStudy(false, TEXT("Could not save the candidate screenshot or side-by-side image."));
+            FinishShadowStudy(false, GOTEXT("Could not save the candidate screenshot or side-by-side image."));
             return;
         }
-        FinishShadowStudy(true, TEXT("Shadow A/B study completed."));
+        FinishShadowStudy(true, GOTEXT("Shadow A/B study completed."));
     }
 }
 
@@ -1603,19 +1604,19 @@ void UGraphicsOptimizerSubsystem::FinishShadowStudy(bool bSuccess, const FString
     const bool bComplete = bSuccess && RestoreFailures == 0;
     bLastShadowStudyCompleted = bComplete;
     const FString MeshPath = ShadowCandidates.IsValidIndex(ShadowSelectedCandidate)
-        ? ShadowCandidates[ShadowSelectedCandidate].MeshPath : TEXT("unavailable");
+        ? ShadowCandidates[ShadowSelectedCandidate].MeshPath : GOTEXT("unavailable");
     const FString BaselineGPU = ShadowBaselinePerformance.GPUSamples > 0
-        ? FString::Printf(TEXT("%.2f ms (%d samples)"), ShadowBaselinePerformance.AverageGPUMS,
-            ShadowBaselinePerformance.GPUSamples) : TEXT("unavailable");
+        ? FGraphicsOptimizerLocalization::Printf(TEXT("%.2f ms (%d samples)"), ShadowBaselinePerformance.AverageGPUMS,
+            ShadowBaselinePerformance.GPUSamples) : GOTEXT("unavailable");
     const FString CandidateGPU = ShadowCandidatePerformance.GPUSamples > 0
-        ? FString::Printf(TEXT("%.2f ms (%d samples)"), ShadowCandidatePerformance.AverageGPUMS,
-            ShadowCandidatePerformance.GPUSamples) : TEXT("unavailable");
+        ? FGraphicsOptimizerLocalization::Printf(TEXT("%.2f ms (%d samples)"), ShadowCandidatePerformance.AverageGPUMS,
+            ShadowCandidatePerformance.GPUSamples) : GOTEXT("unavailable");
     const FString GPUDifference = ShadowBaselinePerformance.GPUSamples > 0 && ShadowCandidatePerformance.GPUSamples > 0
         ? FString::Printf(TEXT("%+.2f ms"), ShadowCandidatePerformance.AverageGPUMS - ShadowBaselinePerformance.AverageGPUMS)
-        : TEXT("unavailable");
-    ShadowStudyReport = FString::Printf(
+        : GOTEXT("unavailable");
+    ShadowStudyReport = FGraphicsOptimizerLocalization::Printf(
         TEXT("Phase 3 shadow caster A/B | %s\nMesh group #%d: %s\nComponents temporarily changed: %d (CastShadow false, then restored)\nThe plugin did not change Scalability. Shadow quality %d, effects quality %d, resolution setting %.0f (0 means project default). Gameplay was paused; camera was checked each frame.\nMeasurement: %.1f sec per side, 1 sec warmup each. Effective max tick rate: %.1f FPS.\nBaseline: %.2f FPS | 1%% low %.2f FPS | frame %.2f ms | render %.2f ms | GPU %s\nCandidate: %.2f FPS | 1%% low %.2f FPS | frame %.2f ms | render %.2f ms | GPU %s\nCandidate - baseline: %+.2f FPS | GPU %s\n"),
-        bComplete ? TEXT("completed") : TEXT("stopped"), ShadowSelectedCandidate, *MeshPath, ChangedCount,
+        bComplete ? GOTEXT("completed") : GOTEXT("stopped"), ShadowSelectedCandidate, *MeshPath, ChangedCount,
         ShadowOriginalQuality.ShadowQuality, ShadowOriginalQuality.EffectsQuality, ShadowOriginalQuality.ResolutionQuality,
         ShadowMeasurementSeconds, ShadowFrameRateCapFPS,
         ShadowBaselinePerformance.AverageFPS, ShadowBaselinePerformance.OnePercentLowFPS,
@@ -1628,17 +1629,17 @@ void UGraphicsOptimizerSubsystem::FinishShadowStudy(bool bSuccess, const FString
     if (ShadowFrameRateCapFPS > 0.0f &&
         (ShadowBaselinePerformance.AverageFPS >= ShadowFrameRateCapFPS * 0.98 ||
          ShadowCandidatePerformance.AverageFPS >= ShadowFrameRateCapFPS * 0.98))
-        ShadowStudyReport += TEXT("Frame cap may hide the full FPS difference.\n");
-    ShadowStudyReport += TEXT("This measures whole-frame effects of one mesh group, not the GPU shadow pass in isolation. A speed gain is not proof that the visual change is acceptable.\n");
-    ShadowStudyReport += TEXT("Result: ") + Reason + TEXT("\n");
+        ShadowStudyReport += GOTEXT("Frame cap may hide the full FPS difference.\n");
+    ShadowStudyReport += GOTEXT("This measures whole-frame effects of one mesh group, not the GPU shadow pass in isolation. A speed gain is not proof that the visual change is acceptable.\n");
+    ShadowStudyReport += GOTEXT("Result: ") + Reason + TEXT("\n");
     if (RestoreFailures > 0)
-        ShadowStudyReport += FString::Printf(TEXT("WARNING: %d restoration checks failed.\n"), RestoreFailures);
-    ShadowStudyReport += TEXT("A/B image: ") + (ShadowStudyImagePath.IsEmpty() ? TEXT("unavailable") : ShadowStudyImagePath) + TEXT("\n");
-    ShadowStudyReport += TEXT("Output directory: ") + ShadowStudyDirectory + TEXT("\n");
+        ShadowStudyReport += FGraphicsOptimizerLocalization::Printf(TEXT("WARNING: %d restoration checks failed.\n"), RestoreFailures);
+    ShadowStudyReport += GOTEXT("A/B image: ") + (ShadowStudyImagePath.IsEmpty() ? GOTEXT("unavailable") : ShadowStudyImagePath) + TEXT("\n");
+    ShadowStudyReport += GOTEXT("Output directory: ") + ShadowStudyDirectory + TEXT("\n");
     const FString ReportPath = FPaths::Combine(ShadowStudyDirectory, TEXT("ShadowReport.txt"));
     const bool bReportSaved = !ShadowStudyDirectory.IsEmpty() &&
         FFileHelper::SaveStringToFile(ShadowStudyReport, *ReportPath);
-    ArchiveReport(TEXT("Shadow:") + ShadowStudyDirectory, TEXT("Shadow caster A/B"), ShadowStudyReport);
+    ArchiveReport(TEXT("Shadow:") + ShadowStudyDirectory, GOTEXT("Shadow caster A/B"), ShadowStudyReport);
     ShadowStudyStage = EShadowStudyStage::None;
     ShadowWorld.Reset();
     ShadowViewport.Reset();
@@ -1646,11 +1647,11 @@ void UGraphicsOptimizerSubsystem::FinishShadowStudy(bool bSuccess, const FString
     bShadowPausedWorld = false;
     if (bComplete)
         LastActionMessage = bReportSaved
-            ? FString::Printf(TEXT("Shadow A/B complete. Original flags restored. Report: %s"), *ReportPath)
-            : TEXT("Shadow A/B complete. Original flags restored. Could not save ShadowReport.txt; use Copy Shadow Report.");
+            ? FGraphicsOptimizerLocalization::Printf(TEXT("Shadow A/B complete. Original flags restored. Report: %s"), *ReportPath)
+            : GOTEXT("Shadow A/B complete. Original flags restored. Could not save ShadowReport.txt; use Copy Shadow Report.");
     else
         LastActionMessage = Reason +
-            (RestoreFailures > 0 ? TEXT(" WARNING: some shadow flags or pause state could not be restored.") : TEXT(""));
+            (RestoreFailures > 0 ? GOTEXT(" WARNING: some shadow flags or pause state could not be restored.") : TEXT(""));
     if (bComplete)
     {
         UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][ShadowStudy] %s\n%s"),
@@ -1665,7 +1666,7 @@ void UGraphicsOptimizerSubsystem::FinishShadowStudy(bool bSuccess, const FString
 
 void UGraphicsOptimizerSubsystem::CancelShadowStudy()
 {
-    if (IsShadowStudyRunning()) FinishShadowStudy(false, TEXT("Shadow A/B study cancelled."));
+    if (IsShadowStudyRunning()) FinishShadowStudy(false, GOTEXT("Shadow A/B study cancelled."));
 }
 
 bool UGraphicsOptimizerSubsystem::StartGpuTraceCapture(float MeasurementSeconds, bool bFreezeScene)
@@ -1678,12 +1679,12 @@ bool UGraphicsOptimizerSubsystem::StartGpuTraceCapture(float MeasurementSeconds,
         !Camera || !FApp::HasFocus() || Runner.IsRunning() || IsVisualComparisonRunning() ||
         IsMotionComparisonRunning() || IsShadowStudyRunning() || IsGpuTraceCaptureRunning() || IsLumenDetailStudyRunning())
     {
-        LastActionMessage = TEXT("GPU capture needs an idle, focused PIE game viewport and a player camera.");
+        LastActionMessage = GOTEXT("GPU capture needs an idle, focused PIE game viewport and a player camera.");
         return false;
     }
     if (FTraceAuxiliary::IsConnected())
     {
-        LastActionMessage = TEXT("Another Unreal trace is already recording. Stop that trace before this capture so its channels and file are not changed.");
+        LastActionMessage = GOTEXT("Another Unreal trace is already recording. Stop that trace before this capture so its channels and file are not changed.");
         UE_LOG(LogGraphicsOptimizer, Warning, TEXT("[GraphicsOptimizer][GpuTrace] %s"), *LastActionMessage);
         return false;
     }
@@ -1703,7 +1704,7 @@ bool UGraphicsOptimizerSubsystem::StartGpuTraceCapture(float MeasurementSeconds,
     if (bGpuTracePausedWorld && !UGameplayStatics::SetGamePaused(World, true))
     {
         bGpuTracePausedWorld = false;
-        LastActionMessage = TEXT("Could not pause gameplay for static GPU capture.");
+        LastActionMessage = GOTEXT("Could not pause gameplay for static GPU capture.");
         return false;
     }
     GpuTraceWorld = World;
@@ -1726,12 +1727,12 @@ bool UGraphicsOptimizerSubsystem::StartGpuTraceCapture(float MeasurementSeconds,
         bGpuTracePausedWorld = false;
         GpuTraceWorld.Reset();
         GpuTraceViewport.Reset();
-        LastActionMessage = TEXT("Could not create the GPU trace output directory.");
+        LastActionMessage = GOTEXT("Could not create the GPU trace output directory.");
         return false;
     }
     GpuTraceStage = EGpuTraceStage::Warmup;
     GpuTraceBenchmark.BeginWarmup(1.0f);
-    LastActionMessage = TEXT("GPU trace: one-second warmup started. Keep the PIE viewport focused and visible.");
+    LastActionMessage = GOTEXT("GPU trace: one-second warmup started. Keep the PIE viewport focused and visible.");
     UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][GpuTrace] %s Output: %s"), *LastActionMessage, *GpuTracePath);
     return true;
 }
@@ -1743,7 +1744,7 @@ bool UGraphicsOptimizerSubsystem::StartGpuPassStudy(float MeasurementSeconds)
     if (GpuPassStudyOriginalQuality.GlobalIlluminationQuality <= 0 ||
         GpuPassStudyOriginalQuality.ShadowQuality <= 0)
     {
-        FinishGpuTraceCapture(false, TEXT("GPU pass study needs GI and Shadow quality above 0."));
+        FinishGpuTraceCapture(false, GOTEXT("GPU pass study needs GI and Shadow quality above 0."));
         return false;
     }
     FViewport* Viewport = GpuTraceViewport.IsValid() ? GpuTraceViewport->Viewport : nullptr;
@@ -1751,7 +1752,7 @@ bool UGraphicsOptimizerSubsystem::StartGpuPassStudy(float MeasurementSeconds)
     if (GpuPassStudyImageSize.X <= 0 || GpuPassStudyImageSize.Y <= 0 ||
         static_cast<int64>(GpuPassStudyImageSize.X) * GpuPassStudyImageSize.Y > 16000000)
     {
-        FinishGpuTraceCapture(false, TEXT("PIE viewport size is invalid or too large for GPU pass A/B images."));
+        FinishGpuTraceCapture(false, GOTEXT("PIE viewport size is invalid or too large for GPU pass A/B images."));
         return false;
     }
     bGpuPassStudy = true;
@@ -1760,7 +1761,7 @@ bool UGraphicsOptimizerSubsystem::StartGpuPassStudy(float MeasurementSeconds)
     GpuPassStudyTraces.SetNum(3);
     GpuPassStudyPerformance.SetNum(3);
     GpuTracePath = FPaths::Combine(GpuTraceDirectory, TEXT("Baseline.utrace"));
-    LastActionMessage = TEXT("GPU pass A/B: warming up the baseline. Gameplay is paused; camera and settings will be checked.");
+    LastActionMessage = GOTEXT("GPU pass A/B: warming up the baseline. Gameplay is paused; camera and settings will be checked.");
     UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][GpuPassStudy] %s Baseline trace: %s"),
         *LastActionMessage, *GpuTracePath);
     return true;
@@ -1773,21 +1774,21 @@ void UGraphicsOptimizerSubsystem::TickGpuTraceCapture()
     APlayerCameraManager* Camera = World ? UGameplayStatics::GetPlayerCameraManager(World, 0) : nullptr;
     if (!World || !ViewportClient || !ViewportClient->Viewport || !Camera || !FApp::HasFocus())
     {
-        FinishGpuTraceCapture(false, TEXT("PIE viewport, camera, or application focus was lost."));
+        FinishGpuTraceCapture(false, GOTEXT("PIE viewport, camera, or application focus was lost."));
         return;
     }
     if (bGpuPassStudy && (!World->IsPaused() ||
         ViewportClient->Viewport->GetSizeXY() != GpuPassStudyImageSize ||
         Scalability::GetQualityLevels() != GpuPassStudyExpectedQuality))
     {
-        FinishGpuTraceCapture(false, TEXT("GPU pass A/B stopped: pause state, viewport size, or graphics settings changed."));
+        FinishGpuTraceCapture(false, GOTEXT("GPU pass A/B stopped: pause state, viewport size, or graphics settings changed."));
         return;
     }
     if (bGpuTraceFreezeScene &&
         (FVector::DistSquared(GpuTraceCameraLocation, Camera->GetCameraLocation()) > 1.0f ||
          !GpuTraceCameraRotation.Equals(Camera->GetCameraRotation(), 0.1f)))
     {
-        FinishGpuTraceCapture(false, TEXT("Camera moved during static GPU capture."));
+        FinishGpuTraceCapture(false, GOTEXT("Camera moved during static GPU capture."));
         return;
     }
     if (GpuTraceStage == EGpuTraceStage::Warmup)
@@ -1813,7 +1814,7 @@ void UGraphicsOptimizerSubsystem::TickGpuTraceCapture()
         {
             if (!GpuTraceNewChannels.IsEmpty()) FTraceAuxiliary::DisableChannels(*GpuTraceNewChannels);
             GpuTraceNewChannels.Empty();
-            FinishGpuTraceCapture(false, TEXT("UE trace could not start. Check Output Log and whether another trace is active."));
+            FinishGpuTraceCapture(false, GOTEXT("UE trace could not start. Check Output Log and whether another trace is active."));
             return;
         }
         bGpuTraceOwnsTrace = true;
@@ -1821,7 +1822,7 @@ void UGraphicsOptimizerSubsystem::TickGpuTraceCapture()
         TRACE_BEGIN_REGION(TEXT("GraphicsOptimizerGpuMeasurement"));
         GpuTraceBenchmark.BeginMeasurement(GpuTraceMeasurementSeconds, ViewportClient);
         GpuTraceStage = EGpuTraceStage::Measuring;
-        LastActionMessage = TEXT("GPU trace: measuring and recording GPU timing events.");
+        LastActionMessage = GOTEXT("GPU trace: measuring and recording GPU timing events.");
         return;
     }
     GpuTraceBenchmark.TickMeasurement();
@@ -1833,7 +1834,7 @@ void UGraphicsOptimizerSubsystem::TickGpuTraceCapture()
         return;
     }
     FinishGpuTraceCapture(GpuTracePerformance.FrameSamples >= 30,
-        GpuTracePerformance.FrameSamples >= 30 ? TEXT("GPU trace capture completed.") : TEXT("Fewer than 30 frame samples; repeat the capture."));
+        GpuTracePerformance.FrameSamples >= 30 ? GOTEXT("GPU trace capture completed.") : GOTEXT("Fewer than 30 frame samples; repeat the capture."));
 }
 
 bool UGraphicsOptimizerSubsystem::CaptureGpuPassStudyImage()
@@ -1882,7 +1883,7 @@ void UGraphicsOptimizerSubsystem::FinishGpuPassStudySegment()
 {
     if (GpuTracePerformance.FrameSamples < 30 || GpuTracePerformance.GPUSamples < 30)
     {
-        FinishGpuTraceCapture(false, TEXT("GPU pass A/B had fewer than 30 frame or GPU samples."));
+        FinishGpuTraceCapture(false, GOTEXT("GPU pass A/B had fewer than 30 frame or GPU samples."));
         return;
     }
     if (bGpuTraceOwnsTrace)
@@ -1895,13 +1896,13 @@ void UGraphicsOptimizerSubsystem::FinishGpuPassStudySegment()
         bGpuTraceOwnsTrace = false;
         if (!bStopped)
         {
-            FinishGpuTraceCapture(false, TEXT("Could not stop a GPU pass study trace cleanly."));
+            FinishGpuTraceCapture(false, GOTEXT("Could not stop a GPU pass study trace cleanly."));
             return;
         }
     }
     if (IFileManager::Get().FileSize(*GpuTracePath) <= 0 || !CaptureGpuPassStudyImage())
     {
-        FinishGpuTraceCapture(false, TEXT("Could not save the GPU pass trace or a visible comparison image."));
+        FinishGpuTraceCapture(false, GOTEXT("Could not save the GPU pass trace or a visible comparison image."));
         return;
     }
     GpuPassStudyTraces[GpuPassStudySegment] = GpuTracePath;
@@ -1909,7 +1910,7 @@ void UGraphicsOptimizerSubsystem::FinishGpuPassStudySegment()
     ++GpuPassStudySegment;
     if (GpuPassStudySegment == 3)
     {
-        FinishGpuTraceCapture(true, TEXT("GPU pass A/B completed."));
+        FinishGpuTraceCapture(true, GOTEXT("GPU pass A/B completed."));
         return;
     }
     GpuPassStudyExpectedQuality = GpuPassStudyOriginalQuality;
@@ -1920,7 +1921,7 @@ void UGraphicsOptimizerSubsystem::FinishGpuPassStudySegment()
     Scalability::SetQualityLevels(GpuPassStudyExpectedQuality);
     if (Scalability::GetQualityLevels() != GpuPassStudyExpectedQuality)
     {
-        FinishGpuTraceCapture(false, TEXT("Could not apply the next GPU pass study quality setting exactly."));
+        FinishGpuTraceCapture(false, GOTEXT("Could not apply the next GPU pass study quality setting exactly."));
         return;
     }
     GpuTracePath = FPaths::Combine(GpuTraceDirectory,
@@ -1928,8 +1929,8 @@ void UGraphicsOptimizerSubsystem::FinishGpuPassStudySegment()
     GpuTraceBenchmark.BeginWarmup(1.0f);
     GpuTraceStage = EGpuTraceStage::Warmup;
     LastActionMessage = GpuPassStudySegment == 1
-        ? TEXT("GPU pass A/B: baseline saved; warming up GI one level lower.")
-        : TEXT("GPU pass A/B: GI saved; warming up Shadow one level lower with GI restored.");
+        ? GOTEXT("GPU pass A/B: baseline saved; warming up GI one level lower.")
+        : GOTEXT("GPU pass A/B: GI saved; warming up Shadow one level lower with GI restored.");
 }
 
 void UGraphicsOptimizerSubsystem::FinishGpuTraceCapture(bool bSuccess, const FString& Reason)
@@ -1956,9 +1957,9 @@ void UGraphicsOptimizerSubsystem::FinishGpuTraceCapture(bool bSuccess, const FSt
                 if (!UGameplayStatics::SetGamePaused(World, false)) bSuccess = false;
         }
         bGpuPassStudyCompleted = bSuccess;
-        GpuTraceReport = FString::Printf(
+        GpuTraceReport = FGraphicsOptimizerLocalization::Printf(
             TEXT("Phase 3 GPU pass A/B | %s\nResult: %s\nFixed camera: %s / %s\nMeasurement: %.1f sec per setting after 1 sec warmup; gameplay paused. Effective max tick rate %.1f FPS.\nOriginal quality: resolution %.1f, shadow %d, GI %d, reflection %d, post %d, texture %d, effects %d\nBaseline: %.2f FPS | 1%% low %.2f | GPU %.2f ms\nGI %d: %.2f FPS (%+.2f) | 1%% low %.2f | GPU %.2f ms (%+.2f)\nShadow %d: %.2f FPS (%+.2f) | 1%% low %.2f | GPU %.2f ms (%+.2f)\nBaseline trace: %s\nGI trace: %s\nShadow trace: %s\nBaseline vs GI image: %s\nBaseline vs Shadow image: %s\nOutput directory: %s\nOriginal Scalability %s. A whole-frame gain does not prove visual acceptability; compare images and GPU pass timers.\n"),
-            bSuccess ? TEXT("completed") : TEXT("stopped"), *Reason,
+            bSuccess ? GOTEXT("completed") : GOTEXT("stopped"), *Reason,
             *GpuTraceCameraLocation.ToCompactString(), *GpuTraceCameraRotation.ToCompactString(),
             GpuTraceMeasurementSeconds, GpuTraceTickCapFPS,
             GpuPassStudyOriginalQuality.ResolutionQuality, GpuPassStudyOriginalQuality.ShadowQuality,
@@ -1980,26 +1981,26 @@ void UGraphicsOptimizerSubsystem::FinishGpuTraceCapture(bool bSuccess, const FSt
             GpuPassStudyPerformance.IsValidIndex(2) ? GpuPassStudyPerformance[2].OnePercentLowFPS : 0.0,
             GpuPassStudyPerformance.IsValidIndex(2) ? GpuPassStudyPerformance[2].AverageGPUMS : 0.0,
             GpuPassStudyPerformance.Num() == 3 ? GpuPassStudyPerformance[2].AverageGPUMS - GpuPassStudyPerformance[0].AverageGPUMS : 0.0,
-            GpuPassStudyTraces.IsValidIndex(0) ? *GpuPassStudyTraces[0] : TEXT("unavailable"),
-            GpuPassStudyTraces.IsValidIndex(1) ? *GpuPassStudyTraces[1] : TEXT("unavailable"),
-            GpuPassStudyTraces.IsValidIndex(2) ? *GpuPassStudyTraces[2] : TEXT("unavailable"),
+            GpuPassStudyTraces.IsValidIndex(0) ? *GpuPassStudyTraces[0] : GOTEXT("unavailable"),
+            GpuPassStudyTraces.IsValidIndex(1) ? *GpuPassStudyTraces[1] : GOTEXT("unavailable"),
+            GpuPassStudyTraces.IsValidIndex(2) ? *GpuPassStudyTraces[2] : GOTEXT("unavailable"),
             *GpuPassStudyGIImagePath, *GpuPassStudyShadowImagePath, *GpuTraceDirectory,
-            bRestored ? TEXT("restored") : TEXT("RESTORE FAILED"));
+            bRestored ? GOTEXT("restored") : GOTEXT("RESTORE FAILED"));
         if (GpuTraceTickCapFPS > 0.0f)
         {
             for (const FGraphicsPerformanceSummary& Summary : GpuPassStudyPerformance)
             {
                 if (Summary.FrameSamples > 0 && Summary.AverageFPS >= GpuTraceTickCapFPS * 0.98f)
                 {
-                    GpuTraceReport += TEXT("At least one arm is near the engine frame cap; FPS gains may be hidden. Compare GPU times too.\n");
+                    GpuTraceReport += GOTEXT("At least one arm is near the engine frame cap; FPS gains may be hidden. Compare GPU times too.\n");
                     break;
                 }
             }
         }
         const FString ReportPath = FPaths::Combine(GpuTraceDirectory, TEXT("GpuPassStudyReport.txt"));
         FFileHelper::SaveStringToFile(GpuTraceReport, *ReportPath);
-        ArchiveReport(TEXT("GPU:") + GpuTraceDirectory, TEXT("GPU pass A/B"), GpuTraceReport);
-        LastActionMessage = Reason + (bRestored ? TEXT(" Original settings restored.") : TEXT(" WARNING: Original settings could not be restored."));
+        ArchiveReport(TEXT("GPU:") + GpuTraceDirectory, GOTEXT("GPU pass A/B"), GpuTraceReport);
+        LastActionMessage = Reason + (bRestored ? GOTEXT(" Original settings restored.") : GOTEXT(" WARNING: Original settings could not be restored."));
         UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][GpuPassStudy] %s\n%s"), *LastActionMessage, *GpuTraceReport);
         GpuTraceStage = EGpuTraceStage::None;
         GpuTraceWorld.Reset();
@@ -2016,11 +2017,11 @@ void UGraphicsOptimizerSubsystem::FinishGpuTraceCapture(bool bSuccess, const FSt
     const int64 TraceBytes = IFileManager::Get().FileSize(*GpuTracePath);
     if (TraceBytes <= 0) bSuccess = false;
     const FString Outcome = bSuccess ? Reason : Reason +
-        (TraceBytes <= 0 ? TEXT(" Trace file is empty or missing.") : TEXT(" Capture or pause restoration did not finish cleanly."));
-    GpuTraceReport = FString::Printf(
+        (TraceBytes <= 0 ? GOTEXT(" Trace file is empty or missing.") : GOTEXT(" Capture or pause restoration did not finish cleanly."));
+    GpuTraceReport = FGraphicsOptimizerLocalization::Printf(
         TEXT("Phase 3 GPU workload trace | %s\nResult: %s\nScene: %s; camera start %s / %s\nSettings: resolution %.1f (0 means project default), shadow %d, GI %d, reflection %d, post %d, texture %d, effects %d\nMeasurement: %.1f sec after 1 sec warmup | effective max tick rate %.1f FPS\nPerformance: %.2f FPS | 1%% low %.2f FPS | frame %.2f ms | game %.2f ms | render %.2f ms | GPU %.2f ms (%d GPU samples, %d frame samples)\nGPU trace: %s (%lld bytes)\nOutput directory: %s\nOpen the .utrace in Unreal Insights > Timing Insights; inspect the GPU track within GraphicsOptimizerGpuMeasurement. Pass timers are inclusive and nested; they must not be added together. The trace records the current graphics settings without changing them.\n"),
-        bSuccess ? TEXT("completed") : TEXT("stopped"), *Outcome,
-        bGpuTraceFreezeScene ? TEXT("static gameplay pause") : TEXT("live gameplay"),
+        bSuccess ? GOTEXT("completed") : GOTEXT("stopped"), *Outcome,
+        bGpuTraceFreezeScene ? GOTEXT("static gameplay pause") : GOTEXT("live gameplay"),
         *GpuTraceCameraLocation.ToCompactString(), *GpuTraceCameraRotation.ToCompactString(),
         GpuTraceQuality.ResolutionQuality, GpuTraceQuality.ShadowQuality,
         GpuTraceQuality.GlobalIlluminationQuality, GpuTraceQuality.ReflectionQuality,
@@ -2033,9 +2034,9 @@ void UGraphicsOptimizerSubsystem::FinishGpuTraceCapture(bool bSuccess, const FSt
         *GpuTracePath, TraceBytes, *GpuTraceDirectory);
     const FString ReportPath = FPaths::Combine(GpuTraceDirectory, TEXT("GpuTraceReport.txt"));
     const bool bSaved = FFileHelper::SaveStringToFile(GpuTraceReport, *ReportPath);
-    ArchiveReport(TEXT("GPU:") + GpuTraceDirectory, TEXT("GPU workload trace"), GpuTraceReport);
-    LastActionMessage = FString::Printf(TEXT("%s %s"), *Outcome,
-        bSaved ? *FString::Printf(TEXT("Report: %s"), *ReportPath) : TEXT("Could not save GpuTraceReport.txt."));
+    ArchiveReport(TEXT("GPU:") + GpuTraceDirectory, GOTEXT("GPU workload trace"), GpuTraceReport);
+    LastActionMessage = FGraphicsOptimizerLocalization::Printf(TEXT("%s %s"), *Outcome,
+        bSaved ? *FGraphicsOptimizerLocalization::Printf(TEXT("Report: %s"), *ReportPath) : GOTEXT("Could not save GpuTraceReport.txt."));
     UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][GpuTrace] %s\n%s"), *LastActionMessage, *GpuTraceReport);
     GpuTraceStage = EGpuTraceStage::None;
     GpuTraceWorld.Reset();
@@ -2045,23 +2046,23 @@ void UGraphicsOptimizerSubsystem::FinishGpuTraceCapture(bool bSuccess, const FSt
 
 void UGraphicsOptimizerSubsystem::CancelGpuTraceCapture()
 {
-    if (IsGpuTraceCaptureRunning()) FinishGpuTraceCapture(false, TEXT("GPU trace capture cancelled."));
+    if (IsGpuTraceCaptureRunning()) FinishGpuTraceCapture(false, GOTEXT("GPU trace capture cancelled."));
 }
 
 bool UGraphicsOptimizerSubsystem::SaveCurrentSettingsAsPreset()
 {
     if (Runner.IsRunning() || IsVisualComparisonRunning() || IsMotionComparisonRunning() || IsShadowStudyRunning() || IsGpuTraceCaptureRunning() || IsLumenDetailStudyRunning())
     {
-        LastActionMessage = TEXT("Wait for the benchmark or comparison capture to finish before saving current settings.");
+        LastActionMessage = GOTEXT("Wait for the benchmark or comparison capture to finish before saving current settings.");
         return false;
     }
     if (!FGraphicsPresetManager::Save(Scalability::GetQualityLevels()))
     {
-        LastActionMessage = TEXT("Could not write the current settings preset.");
+        LastActionMessage = GOTEXT("Could not write the current settings preset.");
         UE_LOG(LogGraphicsOptimizer, Error, TEXT("[GraphicsOptimizer][Preset] %s"), *LastActionMessage);
         return false;
     }
-    LastActionMessage = FString::Printf(TEXT("Saved current Scalability settings to %s."), *FGraphicsPresetManager::GetPath());
+    LastActionMessage = FGraphicsOptimizerLocalization::Printf(TEXT("Saved current Scalability settings to %s."), *FGraphicsPresetManager::GetPath());
     UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][Preset] %s"), *LastActionMessage);
     return true;
 }
@@ -2071,32 +2072,32 @@ bool UGraphicsOptimizerSubsystem::ApplySavedPreset()
     Scalability::FQualityLevels Configuration;
     if (!FGraphicsPresetManager::Load(Configuration))
     {
-        LastActionMessage = FString::Printf(TEXT("No valid preset found at %s."), *FGraphicsPresetManager::GetPath());
+        LastActionMessage = FGraphicsOptimizerLocalization::Printf(TEXT("No valid preset found at %s."), *FGraphicsPresetManager::GetPath());
         UE_LOG(LogGraphicsOptimizer, Warning, TEXT("[GraphicsOptimizer][Preset] %s"), *LastActionMessage);
         return false;
     }
-    return ApplyConfiguration(Configuration, TEXT("saved preset"));
+    return ApplyConfiguration(Configuration, GOTEXT("saved preset"));
 }
 
 bool UGraphicsOptimizerSubsystem::RestoreAppliedConfiguration()
 {
     if (!bHasAppliedConfiguration || Runner.IsRunning() || IsVisualComparisonRunning() || IsMotionComparisonRunning() || IsShadowStudyRunning() || IsGpuTraceCaptureRunning() || IsLumenDetailStudyRunning())
     {
-        LastActionMessage = TEXT("No applied configuration can be restored right now.");
+        LastActionMessage = GOTEXT("No applied configuration can be restored right now.");
         return false;
     }
     Scalability::SetQualityLevels(OriginalBeforeApply);
     if (Scalability::GetQualityLevels() != OriginalBeforeApply)
     {
-        LastActionMessage = TEXT("Failed to restore the pre-apply graphics settings.");
+        LastActionMessage = GOTEXT("Failed to restore the pre-apply graphics settings.");
         UE_LOG(LogGraphicsOptimizer, Error, TEXT("[GraphicsOptimizer][Apply] %s"), *LastActionMessage);
         return false;
     }
     bHasAppliedConfiguration = false;
-    LastActionMessage = TEXT("Pre-apply graphics settings restored.");
+    LastActionMessage = GOTEXT("Pre-apply graphics settings restored.");
     if (IsFullAnalysisComplete())
     {
-        FullAnalysisDecision = TEXT("Restored pre-apply graphics settings in PIE. No recommendation was saved.");
+        FullAnalysisDecision = GOTEXT("Restored pre-apply graphics settings in PIE. No recommendation was saved.");
         WriteFullAnalysisReport();
     }
     UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][Apply] %s"), *LastActionMessage);
@@ -2121,7 +2122,7 @@ void UGraphicsOptimizerSubsystem::CancelBenchmark()
     ArchiveBenchmarkIfFinished();
     RestoreStatUnit();
     RestoreGameplayPause();
-    if (bWasFullAnalysis) FinishFullAnalysis(false, TEXT("Full analysis cancelled by user."));
+    if (bWasFullAnalysis) FinishFullAnalysis(false, GOTEXT("Full analysis cancelled by user."));
 }
 
 void UGraphicsOptimizerSubsystem::WriteFullAnalysisReport()
@@ -2131,65 +2132,65 @@ void UGraphicsOptimizerSubsystem::WriteFullAnalysisReport()
     const FGraphicsExperimentResult* Baseline = Results.IsValidIndex(0) ? &Results[0] : nullptr;
     const FGraphicsExperimentResult* Best = Results.IsValidIndex(BestIndex) ? &Results[BestIndex] : nullptr;
     const FGraphicsValidationResult* Validation = Runner.GetSelectedValidation();
-    FullAnalysisReport = FString::Printf(
+    FullAnalysisReport = FGraphicsOptimizerLocalization::Printf(
         TEXT("Graphics Optimizer | full analysis\nState: %s\nOutcome: %s\nTarget: %.1f FPS\nDecision: %s\n\n1. Measured setting search\nBaseline: %s\nMeasured recommendation: %s\nRecommendation changes: %s\nTarget verdict: %s\nOriginal settings were restored after the measurements. The recommendation is not applied automatically.\n"),
-        FullAnalysisStage == EFullAnalysisStage::Complete ? TEXT("completed") : TEXT("stopped"),
+        FullAnalysisStage == EFullAnalysisStage::Complete ? GOTEXT("completed") : GOTEXT("stopped"),
         *FullAnalysisOutcome, Runner.GetOptions().TargetFPS, *FullAnalysisDecision,
         Baseline ? *FString::Printf(TEXT("%.2f FPS | GPU %.2f ms | 1%% low %.2f FPS"),
-            Baseline->Performance.AverageFPS, Baseline->Performance.AverageGPUMS, Baseline->Performance.OnePercentLowFPS) : TEXT("unavailable"),
+            Baseline->Performance.AverageFPS, Baseline->Performance.AverageGPUMS, Baseline->Performance.OnePercentLowFPS) : GOTEXT("unavailable"),
         Best ? *FString::Printf(TEXT("#%d %s | %.2f FPS | GPU %.2f ms | 1%% low %.2f FPS"),
             BestIndex, *Best->Label, Best->Performance.AverageFPS, Best->Performance.AverageGPUMS,
-            Best->Performance.OnePercentLowFPS) : TEXT("unavailable"),
-        Best ? *Best->Label : TEXT("unavailable"),
-        Best ? (Runner.HasMetOptimizationTarget() ? TEXT("repeatably met") :
-            Validation ? TEXT("not repeatably met") :
-            !Best->bTargetEvaluationValid ? TEXT("inconclusive (frame cap)") : TEXT("target missed")) : TEXT("unavailable"));
+            Best->Performance.OnePercentLowFPS) : GOTEXT("unavailable"),
+        Best ? *Best->Label : GOTEXT("unavailable"),
+        Best ? (Runner.HasMetOptimizationTarget() ? GOTEXT("repeatably met") :
+            Validation ? GOTEXT("not repeatably met") :
+            !Best->bTargetEvaluationValid ? GOTEXT("inconclusive (frame cap)") : GOTEXT("target missed")) : GOTEXT("unavailable"));
     if (Best && Baseline)
-        FullAnalysisReport += FString::Printf(TEXT("Measured difference: %+.2f FPS | GPU %+.2f ms | 1%% low %+.2f FPS\n"),
+        FullAnalysisReport += FGraphicsOptimizerLocalization::Printf(TEXT("Measured difference: %+.2f FPS | GPU %+.2f ms | 1%% low %+.2f FPS\n"),
             Best->Performance.AverageFPS - Baseline->Performance.AverageFPS,
             Best->Performance.AverageGPUMS - Baseline->Performance.AverageGPUMS,
             Best->Performance.OnePercentLowFPS - Baseline->Performance.OnePercentLowFPS);
     if (Validation)
-        FullAnalysisReport += FString::Printf(TEXT("Selected validation: median %.2f FPS | range %.2f-%.2f FPS | target met %d/%d | %s\n"),
+        FullAnalysisReport += FGraphicsOptimizerLocalization::Printf(TEXT("Selected validation: median %.2f FPS | range %.2f-%.2f FPS | target met %d/%d | %s\n"),
             Validation->MedianFPS, Validation->MinimumFPS, Validation->MaximumFPS,
             Validation->TargetMetRuns, FOptimizationManager::ValidationRunsPerCandidate,
-            Validation->bAllTargetEvaluationsValid ? TEXT("valid") : TEXT("frame-cap verdict inconclusive"));
-    FullAnalysisReport += TEXT("\n2. GPU pass A/B\n") +
-        (GpuTraceReport.IsEmpty() ? TEXT("not completed") : GpuTraceReport) + TEXT("\n");
-    FullAnalysisReport += TEXT("\n3. Local shadow-caster experiments (component-count shortlist, exploratory; not part of automatic setting recommendation)\n");
+            Validation->bAllTargetEvaluationsValid ? GOTEXT("valid") : GOTEXT("frame-cap verdict inconclusive"));
+    FullAnalysisReport += GOTEXT("\n2. GPU pass A/B\n") +
+        (GpuTraceReport.IsEmpty() ? GOTEXT("not completed") : GpuTraceReport) + TEXT("\n");
+    FullAnalysisReport += GOTEXT("\n3. Local shadow-caster experiments (component-count shortlist, exploratory; not part of automatic setting recommendation)\n");
     if (FullAnalysisShadowObservations.IsEmpty())
-        FullAnalysisReport += TEXT("No eligible shadow-caster group was measured.\n");
+        FullAnalysisReport += GOTEXT("No eligible shadow-caster group was measured.\n");
     else
     {
         int32 BestShadowIndex = INDEX_NONE;
         for (int32 Index = 0; Index < FullAnalysisShadowObservations.Num(); ++Index)
         {
             const FFullShadowObservation& Observation = FullAnalysisShadowObservations[Index];
-            FullAnalysisReport += FString::Printf(TEXT("Group %d: %s | FPS %+.2f | GPU saved %.2f ms | image %s\n"),
+            FullAnalysisReport += FGraphicsOptimizerLocalization::Printf(TEXT("Group %d: %s | FPS %+.2f | GPU saved %.2f ms | image %s\n"),
                 Index, *Observation.MeshPath, Observation.FPSGain, Observation.GPUMSGain, *Observation.ImagePath);
             if (BestShadowIndex == INDEX_NONE || Observation.GPUMSGain > FullAnalysisShadowObservations[BestShadowIndex].GPUMSGain)
                 BestShadowIndex = Index;
         }
         if (BestShadowIndex != INDEX_NONE)
-            FullAnalysisReport += FString::Printf(TEXT("Largest measured shadow-caster GPU saving in this shortlist: group %d (%.2f ms). Review its image; it is not applied by the recommendation button.\n"),
+            FullAnalysisReport += FGraphicsOptimizerLocalization::Printf(TEXT("Largest measured shadow-caster GPU saving in this shortlist: group %d (%.2f ms). Review its image; it is not applied by the recommendation button.\n"),
                 BestShadowIndex, FullAnalysisShadowObservations[BestShadowIndex].GPUMSGain);
     }
     if (FullAnalysisStage == EFullAnalysisStage::Failed && !bLastShadowStudyCompleted && !ShadowStudyReport.IsEmpty())
-        FullAnalysisReport += TEXT("\nInterrupted shadow experiment:\n") + ShadowStudyReport;
-    FullAnalysisReport += TEXT("\n4. Engine scene diagnosis (VSM risk and repeated-mesh candidates)\n") +
-        (EngineSceneReport.IsEmpty() ? TEXT("not completed\n") : EngineSceneReport);
-    FullAnalysisReport += TEXT("\n5. Lumen detail A/B\n") +
-        (LumenStudyReport.IsEmpty() ? TEXT("not completed\n") : LumenStudyReport);
-    FullAnalysisReport += TEXT("\n6. Visual comparison\nBaseline vs measured recommendation: ") +
-        (ComparisonImagePath.IsEmpty() ? TEXT("unavailable") : ComparisonImagePath) + TEXT("\n");
-    FullAnalysisReport += TEXT("A measured speed gain does not establish acceptable image quality. Review the side-by-side images before applying or saving any change.\n");
-    FullAnalysisReport += TEXT("\n7. All measured setting configurations and repeat validation\n") +
-        (LatestBenchmarkReport.IsEmpty() ? TEXT("not completed\n") : LatestBenchmarkReport);
-    FullAnalysisReport += TEXT("Output directory: ") + FullAnalysisDirectory + TEXT("\n");
+        FullAnalysisReport += GOTEXT("\nInterrupted shadow experiment:\n") + ShadowStudyReport;
+    FullAnalysisReport += GOTEXT("\n4. Engine scene diagnosis (VSM risk and repeated-mesh candidates)\n") +
+        (EngineSceneReport.IsEmpty() ? GOTEXT("not completed\n") : EngineSceneReport);
+    FullAnalysisReport += GOTEXT("\n5. Lumen detail A/B\n") +
+        (LumenStudyReport.IsEmpty() ? GOTEXT("not completed\n") : LumenStudyReport);
+    FullAnalysisReport += GOTEXT("\n6. Visual comparison\nBaseline vs measured recommendation: ") +
+        (ComparisonImagePath.IsEmpty() ? GOTEXT("unavailable") : ComparisonImagePath) + TEXT("\n");
+    FullAnalysisReport += GOTEXT("A measured speed gain does not establish acceptable image quality. Review the side-by-side images before applying or saving any change.\n");
+    FullAnalysisReport += GOTEXT("\n7. All measured setting configurations and repeat validation\n") +
+        (LatestBenchmarkReport.IsEmpty() ? GOTEXT("not completed\n") : LatestBenchmarkReport);
+    FullAnalysisReport += GOTEXT("Output directory: ") + FullAnalysisDirectory + TEXT("\n");
     if (!FullAnalysisDirectory.IsEmpty())
         FFileHelper::SaveStringToFile(FullAnalysisReport,
             *FPaths::Combine(FullAnalysisDirectory, TEXT("FullAnalysisReport.txt")));
-    ArchiveReport(TEXT("Full:") + FullAnalysisDirectory, TEXT("Full analysis"), FullAnalysisReport);
+    ArchiveReport(TEXT("Full:") + FullAnalysisDirectory, GOTEXT("Full analysis"), FullAnalysisReport);
 }
 
 void UGraphicsOptimizerSubsystem::FinishFullAnalysis(bool bComplete, const FString& Reason)
@@ -2200,7 +2201,7 @@ void UGraphicsOptimizerSubsystem::FinishFullAnalysis(bool bComplete, const FStri
     if (Scalability::GetQualityLevels() != FullAnalysisStartingQuality)
     {
         FullAnalysisStage = EFullAnalysisStage::Failed;
-        FullAnalysisDecision = TEXT("Original graphics settings could not be restored; inspect PIE before applying settings.");
+        FullAnalysisDecision = GOTEXT("Original graphics settings could not be restored; inspect PIE before applying settings.");
     }
     if (bFullAnalysisPausedWorld)
     {
@@ -2209,16 +2210,17 @@ void UGraphicsOptimizerSubsystem::FinishFullAnalysis(bool bComplete, const FStri
             if (!UGameplayStatics::SetGamePaused(World, false))
             {
                 FullAnalysisStage = EFullAnalysisStage::Failed;
-                FullAnalysisDecision = TEXT("Pause-state restoration failed; inspect PIE before applying settings.");
+                FullAnalysisDecision = GOTEXT("Pause-state restoration failed; inspect PIE before applying settings.");
             }
         }
     }
     bFullAnalysisPausedWorld = false;
     FullAnalysisWorld.Reset();
-    if (FullAnalysisStage == EFullAnalysisStage::Failed && FullAnalysisDecision.StartsWith(TEXT("Pending:")))
-        FullAnalysisDecision = TEXT("No automatic application. Review the partial results and original settings.");
+    if (FullAnalysisStage == EFullAnalysisStage::Failed &&
+        FullAnalysisDecision == GOTEXT("Pending: original settings retained until you choose Apply Recommended or Keep Original."))
+        FullAnalysisDecision = GOTEXT("No automatic application. Review the partial results and original settings.");
     WriteFullAnalysisReport();
-    LastActionMessage = Reason + FString::Printf(TEXT(" Report: %s"),
+    LastActionMessage = Reason + FGraphicsOptimizerLocalization::Printf(TEXT(" Report: %s"),
         *FPaths::Combine(FullAnalysisDirectory, TEXT("FullAnalysisReport.txt")));
     UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][FullAnalysis] %s\n%s"),
         *LastActionMessage, *FullAnalysisReport);
@@ -2233,12 +2235,12 @@ void UGraphicsOptimizerSubsystem::AdvanceFullAnalysis()
         if (Runner.GetState() != EGraphicsOptimizerState::Completed ||
             !Runner.GetResults().IsValidIndex(Runner.GetBestResultIndex()))
         {
-            FinishFullAnalysis(false, TEXT("Setting search did not produce a valid recommendation."));
+            FinishFullAnalysis(false, GOTEXT("Setting search did not produce a valid recommendation."));
             return;
         }
         if (!StartGpuPassStudy(FullAnalysisMeasurementSeconds))
         {
-            FinishFullAnalysis(false, TEXT("Could not start the GPU pass A/B stage."));
+            FinishFullAnalysis(false, GOTEXT("Could not start the GPU pass A/B stage."));
             return;
         }
         FullAnalysisStage = EFullAnalysisStage::GpuPasses;
@@ -2246,7 +2248,7 @@ void UGraphicsOptimizerSubsystem::AdvanceFullAnalysis()
     case EFullAnalysisStage::GpuPasses:
         if (!HasGpuPassStudy())
         {
-            FinishFullAnalysis(false, TEXT("GPU pass A/B did not complete."));
+            FinishFullAnalysis(false, GOTEXT("GPU pass A/B did not complete."));
             return;
         }
         ScanEngineScene();
@@ -2259,7 +2261,7 @@ void UGraphicsOptimizerSubsystem::AdvanceFullAnalysis()
                 FullAnalysisStage = EFullAnalysisStage::Shadow;
                 return;
             }
-            FinishFullAnalysis(false, TEXT("Could not start the first shadow-caster experiment."));
+            FinishFullAnalysis(false, GOTEXT("Could not start the first shadow-caster experiment."));
             return;
         }
         // The scene may contain no eligible static-mesh shadow casters.
@@ -2268,18 +2270,18 @@ void UGraphicsOptimizerSubsystem::AdvanceFullAnalysis()
             FullAnalysisStage = EFullAnalysisStage::Lumen;
             return;
         }
-        FinishFullAnalysis(false, TEXT("Could not start the Lumen detail A/B stage."));
+        FinishFullAnalysis(false, GOTEXT("Could not start the Lumen detail A/B stage."));
         return;
     case EFullAnalysisStage::Shadow:
         if (!bLastShadowStudyCompleted)
         {
-            FinishFullAnalysis(false, TEXT("A shadow-caster experiment stopped before completion."));
+            FinishFullAnalysis(false, GOTEXT("A shadow-caster experiment stopped before completion."));
             return;
         }
         {
             FFullShadowObservation& Observation = FullAnalysisShadowObservations.AddDefaulted_GetRef();
             Observation.MeshPath = ShadowCandidates.IsValidIndex(FullAnalysisShadowIndex)
-                ? ShadowCandidates[FullAnalysisShadowIndex].MeshPath : TEXT("unavailable");
+                ? ShadowCandidates[FullAnalysisShadowIndex].MeshPath : GOTEXT("unavailable");
             Observation.ImagePath = ShadowStudyImagePath;
             Observation.Report = ShadowStudyReport;
             Observation.FPSGain = ShadowCandidatePerformance.AverageFPS - ShadowBaselinePerformance.AverageFPS;
@@ -2289,7 +2291,7 @@ void UGraphicsOptimizerSubsystem::AdvanceFullAnalysis()
         if (FullAnalysisShadowIndex < FullAnalysisShadowLimit)
         {
             if (StartShadowStudy(FullAnalysisShadowIndex, FullAnalysisMeasurementSeconds)) return;
-            FinishFullAnalysis(false, TEXT("Could not start the next shadow-caster experiment."));
+            FinishFullAnalysis(false, GOTEXT("Could not start the next shadow-caster experiment."));
             return;
         }
         if (StartLumenDetailStudy(FullAnalysisMeasurementSeconds))
@@ -2297,12 +2299,12 @@ void UGraphicsOptimizerSubsystem::AdvanceFullAnalysis()
             FullAnalysisStage = EFullAnalysisStage::Lumen;
             return;
         }
-        FinishFullAnalysis(false, TEXT("Could not start the Lumen detail A/B stage."));
+        FinishFullAnalysis(false, GOTEXT("Could not start the Lumen detail A/B stage."));
         return;
     case EFullAnalysisStage::Lumen:
         if (!bLumenStudyCompleted)
         {
-            FinishFullAnalysis(false, TEXT("Lumen detail A/B did not complete."));
+            FinishFullAnalysis(false, GOTEXT("Lumen detail A/B did not complete."));
             return;
         }
         if (StartVisualComparison(Runner.GetBestResultIndex()))
@@ -2310,11 +2312,11 @@ void UGraphicsOptimizerSubsystem::AdvanceFullAnalysis()
             FullAnalysisStage = EFullAnalysisStage::Visual;
             return;
         }
-        FinishFullAnalysis(false, TEXT("Could not start the final visual comparison."));
+        FinishFullAnalysis(false, GOTEXT("Could not start the final visual comparison."));
         return;
     case EFullAnalysisStage::Visual:
         FinishFullAnalysis(!ComparisonImagePath.IsEmpty(), ComparisonImagePath.IsEmpty()
-            ? TEXT("Final image comparison did not complete.") : TEXT("Full analysis completed; choose whether to apply the measured recommendation."));
+            ? GOTEXT("Final image comparison did not complete.") : GOTEXT("Full analysis completed; choose whether to apply the measured recommendation."));
         return;
     default: return;
     }
@@ -2325,7 +2327,7 @@ bool UGraphicsOptimizerSubsystem::ApplyFullAnalysisRecommendation()
     if (!IsFullAnalysisComplete()) return false;
     const int32 Index = Runner.GetBestResultIndex();
     if (!ApplyResult(Index)) return false;
-    FullAnalysisDecision = FString::Printf(TEXT("Applied measured recommendation #%d to this PIE session; no preset was saved."), Index);
+    FullAnalysisDecision = FGraphicsOptimizerLocalization::Printf(TEXT("Applied measured recommendation #%d to this PIE session; no preset was saved."), Index);
     WriteFullAnalysisReport();
     return true;
 }
@@ -2336,12 +2338,12 @@ bool UGraphicsOptimizerSubsystem::KeepOriginalAfterFullAnalysis()
     Scalability::SetQualityLevels(FullAnalysisStartingQuality);
     if (Scalability::GetQualityLevels() != FullAnalysisStartingQuality)
     {
-        LastActionMessage = TEXT("Could not restore the settings that were active before full analysis.");
+        LastActionMessage = GOTEXT("Could not restore the settings that were active before full analysis.");
         return false;
     }
     bHasAppliedConfiguration = bFullAnalysisHadAppliedConfiguration;
     OriginalBeforeApply = FullAnalysisPreviousApplyOriginal;
-    FullAnalysisDecision = TEXT("Kept the pre-analysis settings in PIE. No recommendation was saved.");
+    FullAnalysisDecision = GOTEXT("Kept the pre-analysis settings in PIE. No recommendation was saved.");
     WriteFullAnalysisReport();
     LastActionMessage = FullAnalysisDecision;
     return true;
@@ -2425,7 +2427,7 @@ void UGraphicsOptimizerSubsystem::OnEndFrame()
     UWorld* World = GetGameInstance() ? GetGameInstance()->GetWorld() : nullptr;
     if (!World || !World->IsGameWorld())
     {
-        Runner.Abort(TEXT("Game world became unavailable during benchmark."));
+        Runner.Abort(GOTEXT("Game world became unavailable during benchmark."));
         RestoreStatUnit();
         RestoreGameplayPause();
         if (IsFullAnalysisRunning()) AdvanceFullAnalysis();
@@ -2433,7 +2435,7 @@ void UGraphicsOptimizerSubsystem::OnEndFrame()
     }
     if (!FApp::HasFocus())
     {
-        Runner.Abort(TEXT("Application lost focus during benchmark."));
+        Runner.Abort(GOTEXT("Application lost focus during benchmark."));
         RestoreStatUnit();
         RestoreGameplayPause();
         if (IsFullAnalysisRunning()) AdvanceFullAnalysis();
@@ -2446,7 +2448,7 @@ void UGraphicsOptimizerSubsystem::OnEndFrame()
             if (FVector::DistSquared(FixedCameraLocation, Camera->GetCameraLocation()) > 1.0f ||
                 !FixedCameraRotation.Equals(Camera->GetCameraRotation(), 0.1f))
             {
-                Runner.Abort(TEXT("Camera moved during static-scene benchmark."));
+                Runner.Abort(GOTEXT("Camera moved during static-scene benchmark."));
                 RestoreStatUnit();
                 RestoreGameplayPause();
                 if (IsFullAnalysisRunning()) AdvanceFullAnalysis();

@@ -1,5 +1,6 @@
 #include "GraphicsSettingManager.h"
 #include "GraphicsOptimizerRuntime.h"
+#include "GraphicsOptimizerLocalization.h"
 
 float FGraphicsSettingManager::GetValue(const Scalability::FQualityLevels& Q, EGraphicsSetting S)
 {
@@ -86,7 +87,7 @@ bool FGraphicsSettingManager::ApplyCandidate(const FGraphicsExperimentCandidate&
     OutApplied = Scalability::GetQualityLevels();
     const float Actual = GetValue(OutApplied, Candidate.Setting);
     UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][Settings] %s: %.1f -> requested %.1f, applied %.1f"),
-        GetSettingName(Candidate.Setting), GetValue(Original, Candidate.Setting), Candidate.Value, Actual);
+        GOTR(GetSettingName(Candidate.Setting)), GetValue(Original, Candidate.Setting), Candidate.Value, Actual);
     if (!FMath::IsNearlyEqual(Actual, Candidate.Value, 0.1f))
     {
         UE_LOG(LogGraphicsOptimizer, Error, TEXT("[GraphicsOptimizer][Settings] Requested setting was not applied."));

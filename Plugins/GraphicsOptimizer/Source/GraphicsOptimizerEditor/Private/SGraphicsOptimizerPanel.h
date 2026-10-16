@@ -15,6 +15,8 @@ public:
     virtual void Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime) override;
 
 private:
+    TSharedRef<SWidget> BuildContent();
+    FReply ToggleLanguage();
     UGraphicsOptimizerSubsystem* GetSubsystem() const;
     FText GetStatusText() const;
     FText GetResultsText() const;

@@ -1,5 +1,6 @@
 #include "SGraphicsOptimizerPanel.h"
 #include "GraphicsOptimizerSubsystem.h"
+#include "GraphicsOptimizerLocalization.h"
 #include "GraphicsSettingManager.h"
 #include "Editor.h"
 #include "Engine/World.h"
@@ -28,6 +29,8 @@
 
 namespace
 {
+// Returns a raw literal (static storage) - safe to return directly. Callers that
+// need the localized text should wrap the call with GOTR(...) at the use site.
 const TCHAR* StateLabel(EGraphicsOptimizerState State)
 {
     switch (State)
@@ -59,26 +62,52 @@ void SGraphicsOptimizerPanel::Construct(const FArguments& InArgs)
 {
     ChildSlot
     [
+        BuildContent()
+    ];
+}
+
+FReply SGraphicsOptimizerPanel::ToggleLanguage()
+{
+    FGraphicsOptimizerLocalization::ToggleLanguage();
+    ChildSlot
+    [
+        BuildContent()
+    ];
+    return FReply::Handled();
+}
+
+TSharedRef<SWidget> SGraphicsOptimizerPanel::BuildContent()
+{
+    return
         SNew(SScrollBox)
         + SScrollBox::Slot().Padding(10)
         [
             SNew(SVerticalBox)
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(STextBlock).Text(FText::FromString(TEXT("Graphics Optimizer — PIE benchmark"))) ]
+            [
+                SNew(SHorizontalBox)
+                + SHorizontalBox::Slot().AutoWidth()
+                [ SNew(STextBlock).Text(FText::FromString(GOSTR("Graphics Optimizer — PIE benchmark"))) ]
+                + SHorizontalBox::Slot().AutoWidth().Padding(12, 0, 0, 0)
+                [ SNew(SButton)
+                    .ToolTipText(FText::FromString(TEXT("Switch panel language / 패널 언어 전환")))
+                    .Text_Lambda([]() { return FText::FromString(FGraphicsOptimizerLocalization::GetLanguage() == EGraphicsOptimizerLanguage::Korean ? TEXT("English") : TEXT("한국어")); })
+                    .OnClicked(this, &SGraphicsOptimizerPanel::ToggleLanguage) ]
+            ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(STextBlock).Text(FText::FromString(TEXT("Choose a study below, or expand Complete analysis to run every study together. Changes are applied only when you choose an Apply button."))) ]
+            [ SNew(STextBlock).Text(FText::FromString(GOSTR("Choose a study below, or expand Complete analysis to run every study together. Changes are applied only when you choose an Apply button."))) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(STextBlock).Text(FText::FromString(TEXT("Target FPS"))) ]
+            [ SNew(STextBlock).Text(FText::FromString(GOSTR("Target FPS"))) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
             [ SNew(SSpinBox<float>).MinValue(1.0f).MaxValue(500.0f).Value(TargetFPS)
                 .OnValueChanged_Lambda([this](float Value) { TargetFPS = Value; }) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(STextBlock).Text(FText::FromString(TEXT("Measurement duration per configuration (seconds)"))) ]
+            [ SNew(STextBlock).Text(FText::FromString(GOSTR("Measurement duration per configuration (seconds)"))) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
             [ SNew(SSpinBox<float>).MinValue(1.0f).MaxValue(120.0f).Value(MeasurementSeconds)
                 .OnValueChanged_Lambda([this](float Value) { MeasurementSeconds = Value; }) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(STextBlock).Text(FText::FromString(TEXT("Minimum useful FPS gain per extra quality reduction"))) ]
+            [ SNew(STextBlock).Text(FText::FromString(GOSTR("Minimum useful FPS gain per extra quality reduction"))) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
             [ SNew(SSpinBox<float>).MinValue(0.0f).MaxValue(10.0f).Value(MinimumUsefulGainFPS)
                 .OnValueChanged_Lambda([this](float Value) { MinimumUsefulGainFPS = Value; }) ]
@@ -86,94 +115,94 @@ void SGraphicsOptimizerPanel::Construct(const FArguments& InArgs)
             [ SNew(SCheckBox)
                 .IsChecked(ECheckBoxState::Unchecked)
                 .OnCheckStateChanged_Lambda([this](ECheckBoxState State) { bFreezeGameplay = State == ECheckBoxState::Checked; })
-                [ SNew(STextBlock).Text(FText::FromString(TEXT("Freeze gameplay for a static-scene comparison (combat stops)"))) ] ]
+                [ SNew(STextBlock).Text(FText::FromString(GOSTR("Freeze gameplay for a static-scene comparison (combat stops)"))) ] ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
             [ SNew(STextBlock).Text(this, &SGraphicsOptimizerPanel::GetStatusText) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
             [ SNew(STextBlock).Text(this, &SGraphicsOptimizerPanel::GetStatUnitText) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Cancel and Restore")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Cancel and Restore")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && (S->GetRunner().IsRunning() || S->IsVisualComparisonRunning() || S->IsMotionComparisonRunning() || S->IsShadowStudyRunning() || S->IsGpuTraceCaptureRunning() || S->IsLumenDetailStudyRunning()); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::CancelBenchmark) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Copy Latest Results (may include separate runs)")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Copy Latest Results (may include separate runs)")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->IsVisualComparisonRunning() && !S->IsMotionComparisonRunning() && !S->IsShadowStudyRunning() && !S->IsGpuTraceCaptureRunning() && !S->IsLumenDetailStudyRunning() && (!S->GetRunner().GetResults().IsEmpty() || !S->GetShadowStudyReport().IsEmpty() || !S->GetGpuTraceReport().IsEmpty() || !S->GetEngineSceneReport().IsEmpty() || !S->GetLumenDetailReport().IsEmpty()); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::CopyReport) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Copy Accumulated Project Reports")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Copy Accumulated Project Reports")))
                 .IsEnabled_Lambda([this]() { return GetSubsystem() != nullptr; })
                 .OnClicked(this, &SGraphicsOptimizerPanel::CopyAccumulatedReports) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Open Report History Folder")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Open Report History Folder")))
                 .IsEnabled_Lambda([this]() { return GetSubsystem() != nullptr; })
                 .OnClicked(this, &SGraphicsOptimizerPanel::OpenReportHistory) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 8)
             [ SNew(SExpandableArea)
-                .AreaTitle(FText::FromString(TEXT("Quality settings - measured search and selection")))
+                .AreaTitle(FText::FromString(GOSTR("Quality settings - measured search and selection")))
                 .InitiallyCollapsed(false)
                 .BodyContent()
                 [ SNew(SVerticalBox)
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(STextBlock).Text(FText::FromString(TEXT("Compare Scalability candidates, inspect images or motion, then apply or save a selected setting."))) ]
+            [ SNew(STextBlock).Text(FText::FromString(GOSTR("Compare Scalability candidates, inspect images or motion, then apply or save a selected setting."))) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Run Optimization (settings only)")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Run Optimization (settings only)")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->GetRunner().IsRunning() && !S->IsVisualComparisonRunning() && !S->IsShadowStudyRunning() && !S->IsGpuTraceCaptureRunning() && !S->IsLumenDetailStudyRunning(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::RunOptimization) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Run Settings Benchmark (individual changes only)")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Run Settings Benchmark (individual changes only)")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->IsFullAnalysisRunning() && !S->GetRunner().IsRunning() && !S->IsVisualComparisonRunning() && !S->IsMotionComparisonRunning() && !S->IsShadowStudyRunning() && !S->IsGpuTraceCaptureRunning() && !S->IsLumenDetailStudyRunning(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::RunSettingsBenchmark) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Copy Settings Report")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Copy Settings Report")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->GetLatestBenchmarkReport().IsEmpty(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::CopySettingsReport) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(STextBlock).Text(FText::FromString(TEXT("Result number to apply/save (-1 = recommended result)"))) ]
+            [ SNew(STextBlock).Text(FText::FromString(GOSTR("Result number to apply/save (-1 = recommended result)"))) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
             [ SNew(SSpinBox<int32>).MinValue(-1).MaxValue(1000).Value_Lambda([this]() { return SelectedResultIndex; })
                 .OnValueChanged_Lambda([this](int32 Value) { SelectedResultIndex = Value; }) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
             [ SNew(STextBlock).Text(this, &SGraphicsOptimizerPanel::GetSelectedResultText) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Capture A/B: Baseline vs Selected")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Capture A/B: Baseline vs Selected")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->IsVisualComparisonRunning() && !S->IsMotionComparisonRunning() && !S->IsShadowStudyRunning() && !S->IsGpuTraceCaptureRunning() && S->GetRunner().GetState() == EGraphicsOptimizerState::Completed && S->GetRunner().GetResults().IsValidIndex(GetSelectedResultIndex()); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::CaptureVisualComparison) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Open A/B Image at Full Size")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Open A/B Image at Full Size")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->GetComparisonImagePath().IsEmpty(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::OpenComparisonImage) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(STextBlock).Text(FText::FromString(TEXT("A/B preview: baseline on left, selected result on right"))) ]
+            [ SNew(STextBlock).Text(FText::FromString(GOSTR("A/B preview: baseline on left, selected result on right"))) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
             [ SNew(SImage).Image(this, &SGraphicsOptimizerPanel::GetComparisonBrush) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Run 4s A/D Motion Comparison")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Run 4s A/D Motion Comparison")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->IsMotionComparisonRunning() && !S->IsVisualComparisonRunning() && !S->IsShadowStudyRunning() && !S->IsGpuTraceCaptureRunning() && S->GetRunner().GetState() == EGraphicsOptimizerState::Completed && S->GetRunner().GetResults().IsValidIndex(GetSelectedResultIndex()); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::RunMotionComparison) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Open 4s Motion A/B Video")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Open 4s Motion A/B Video")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->GetMotionVideoPath().IsEmpty(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::OpenMotionVideo) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
             [ SNew(STextBlock).Text(this, &SGraphicsOptimizerPanel::GetMotionText) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Apply Selected to PIE")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Apply Selected to PIE")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->IsVisualComparisonRunning() && !S->IsMotionComparisonRunning() && !S->IsShadowStudyRunning() && !S->IsGpuTraceCaptureRunning() && S->GetRunner().GetState() == EGraphicsOptimizerState::Completed && S->GetRunner().GetResults().IsValidIndex(GetSelectedResultIndex()); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::ApplySelectedResult) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Save Selected Preset")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Save Selected Preset")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->IsGpuTraceCaptureRunning() && S->GetRunner().GetState() == EGraphicsOptimizerState::Completed && S->GetRunner().GetResults().IsValidIndex(GetSelectedResultIndex()); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::SaveSelectedPreset) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Apply Saved Preset to PIE")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Apply Saved Preset to PIE")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->GetRunner().IsRunning() && !S->IsVisualComparisonRunning() && !S->IsMotionComparisonRunning() && !S->IsShadowStudyRunning() && !S->IsGpuTraceCaptureRunning(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::ApplySavedPreset) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Restore Pre-Apply Settings")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Restore Pre-Apply Settings")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->GetRunner().IsRunning() && !S->IsVisualComparisonRunning() && !S->IsMotionComparisonRunning() && !S->IsShadowStudyRunning() && !S->IsGpuTraceCaptureRunning() && S->HasAppliedConfiguration(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::RestoreAppliedSettings) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 8)
-            [ SNew(STextBlock).Text(FText::FromString(TEXT("Experiment results"))) ]
+            [ SNew(STextBlock).Text(FText::FromString(GOSTR("Experiment results"))) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
             [ SNew(STextBlock).Text(this, &SGraphicsOptimizerPanel::GetOptimizationText) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
@@ -182,87 +211,87 @@ void SGraphicsOptimizerPanel::Construct(const FArguments& InArgs)
             ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 8)
             [ SNew(SExpandableArea)
-                .AreaTitle(FText::FromString(TEXT("Shadow casters and GPU traces")))
+                .AreaTitle(FText::FromString(GOSTR("Shadow casters and GPU traces")))
                 .InitiallyCollapsed(true)
                 .BodyContent()
                 [ SNew(SVerticalBox)
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(STextBlock).Text(FText::FromString(TEXT("Measure shadow-caster changes and capture GPU pass traces. Results are diagnostic; no shadow change is applied automatically."))) ]
+            [ SNew(STextBlock).Text(FText::FromString(GOSTR("Measure shadow-caster changes and capture GPU pass traces. Results are diagnostic; no shadow change is applied automatically."))) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 8)
-            [ SNew(STextBlock).Text(FText::FromString(TEXT("Local shadow-caster study (static PIE scene)"))) ]
+            [ SNew(STextBlock).Text(FText::FromString(GOSTR("Local shadow-caster study (static PIE scene)"))) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(STextBlock).Text(FText::FromString(TEXT("Scan recently rendered static-mesh components that cast dynamic shadows. Static, Stationary, and Movable are listed; order is count, not GPU cost."))) ]
+            [ SNew(STextBlock).Text(FText::FromString(GOSTR("Scan recently rendered static-mesh components that cast dynamic shadows. Static, Stationary, and Movable are listed; order is count, not GPU cost."))) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Scan Shadow Casters")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Scan Shadow Casters")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->GetRunner().IsRunning() && !S->IsVisualComparisonRunning() && !S->IsMotionComparisonRunning() && !S->IsShadowStudyRunning() && !S->IsGpuTraceCaptureRunning(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::ScanShadowCasters) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
             [ SNew(STextBlock).Text(this, &SGraphicsOptimizerPanel::GetShadowCandidateText) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(STextBlock).Text(FText::FromString(TEXT("Shadow mesh group number to test"))) ]
+            [ SNew(STextBlock).Text(FText::FromString(GOSTR("Shadow mesh group number to test"))) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
             [ SNew(SSpinBox<int32>).MinValue(0).MaxValue(19).Value_Lambda([this]() { return ShadowCandidateIndex; })
                 .OnValueChanged_Lambda([this](int32 Value) { ShadowCandidateIndex = Value; }) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Benchmark Shadow Group A/B")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Benchmark Shadow Group A/B")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->GetRunner().IsRunning() && !S->IsVisualComparisonRunning() && !S->IsMotionComparisonRunning() && !S->IsShadowStudyRunning() && !S->IsGpuTraceCaptureRunning() && ShadowCandidateIndex < S->GetShadowCandidateCount(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::RunShadowStudy) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Open Shadow A/B Image")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Open Shadow A/B Image")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->GetShadowStudyImagePath().IsEmpty(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::OpenShadowStudyImage) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
             [ SNew(SImage).Image(this, &SGraphicsOptimizerPanel::GetShadowBrush) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Copy Shadow Report")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Copy Shadow Report")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->GetShadowStudyReport().IsEmpty(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::CopyShadowStudyReport) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
             [ SNew(STextBlock).Text(this, &SGraphicsOptimizerPanel::GetShadowStudyText) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 8)
-            [ SNew(STextBlock).Text(FText::FromString(TEXT("GPU pass trace (current PIE settings)"))) ]
+            [ SNew(STextBlock).Text(FText::FromString(GOSTR("GPU pass trace (current PIE settings)"))) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(STextBlock).Text(FText::FromString(TEXT("Capture a GPU trace and FPS sample after a 1s warmup. Duration and static-scene checkbox above also apply. Current graphics settings are preserved."))) ]
+            [ SNew(STextBlock).Text(FText::FromString(GOSTR("Capture a GPU trace and FPS sample after a 1s warmup. Duration and static-scene checkbox above also apply. Current graphics settings are preserved."))) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Capture GPU Trace")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Capture GPU Trace")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->GetRunner().IsRunning() && !S->IsVisualComparisonRunning() && !S->IsMotionComparisonRunning() && !S->IsShadowStudyRunning() && !S->IsGpuTraceCaptureRunning(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::CaptureGpuTrace) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Analyze GPU Passes")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Analyze GPU Passes")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->IsGpuTraceCaptureRunning() && IFileManager::Get().FileSize(*S->GetGpuTracePath()) > 0; })
                 .OnClicked(this, &SGraphicsOptimizerPanel::AnalyzeGpuTrace) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Open Latest GPU Trace in Unreal Insights (Shadow for A/B)")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Open Latest GPU Trace in Unreal Insights (Shadow for A/B)")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->IsGpuTraceCaptureRunning() && IFileManager::Get().FileSize(*S->GetGpuTracePath()) > 0; })
                 .OnClicked(this, &SGraphicsOptimizerPanel::OpenGpuTrace) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Copy GPU Report and Pass Analysis")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Copy GPU Report and Pass Analysis")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->IsGpuTraceCaptureRunning() && !S->GetGpuTraceReport().IsEmpty(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::CopyGpuTraceReport) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 8)
-            [ SNew(STextBlock).Text(FText::FromString(TEXT("Fixed-camera GPU A/B: original vs GI -1 vs Shadow -1; each gets a GPU trace and matching image"))) ]
+            [ SNew(STextBlock).Text(FText::FromString(GOSTR("Fixed-camera GPU A/B: original vs GI -1 vs Shadow -1; each gets a GPU trace and matching image"))) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Run GPU Pass A/B (GI and Shadow)")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Run GPU Pass A/B (GI and Shadow)")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->GetRunner().IsRunning() && !S->IsVisualComparisonRunning() && !S->IsMotionComparisonRunning() && !S->IsShadowStudyRunning() && !S->IsGpuTraceCaptureRunning(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::RunGpuPassStudy) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Open Baseline GPU Trace")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Open Baseline GPU Trace")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && S->HasGpuPassStudy(); })
                 .OnClicked_Lambda([this]() { return OpenGpuPassStudyTrace(0); }) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Open GI GPU Trace")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Open GI GPU Trace")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && S->HasGpuPassStudy(); })
                 .OnClicked_Lambda([this]() { return OpenGpuPassStudyTrace(1); }) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Open Shadow GPU Trace")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Open Shadow GPU Trace")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && S->HasGpuPassStudy(); })
                 .OnClicked_Lambda([this]() { return OpenGpuPassStudyTrace(2); }) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Open Baseline vs GI Image")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Open Baseline vs GI Image")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->GetGpuPassStudyGIImagePath().IsEmpty(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::OpenGpuPassStudyGIImage) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Open Baseline vs Shadow Image")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Open Baseline vs Shadow Image")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->GetGpuPassStudyShadowImagePath().IsEmpty(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::OpenGpuPassStudyShadowImage) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
@@ -271,76 +300,75 @@ void SGraphicsOptimizerPanel::Construct(const FArguments& InArgs)
             ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 8)
             [ SNew(SExpandableArea)
-                .AreaTitle(FText::FromString(TEXT("Lumen detail and scene structure")))
+                .AreaTitle(FText::FromString(GOSTR("Lumen detail and scene structure")))
                 .InitiallyCollapsed(true)
                 .BodyContent()
                 [ SNew(SVerticalBox)
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(STextBlock).Text(FText::FromString(TEXT("Investigate Lumen probe cost, VSM risk candidates, and repeated meshes for instancing review."))) ]
+            [ SNew(STextBlock).Text(FText::FromString(GOSTR("Investigate Lumen probe cost, VSM risk candidates, and repeated meshes for instancing review."))) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 8)
-            [ SNew(STextBlock).Text(FText::FromString(TEXT("Engine scene diagnosis: VSM risk and repeated mesh/material groups"))) ]
+            [ SNew(STextBlock).Text(FText::FromString(GOSTR("Engine scene diagnosis: VSM risk and repeated mesh/material groups"))) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Scan VSM and Instancing Candidates")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Scan VSM and Instancing Candidates")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->IsFullAnalysisRunning() && !S->GetRunner().IsRunning() && !S->IsShadowStudyRunning() && !S->IsGpuTraceCaptureRunning() && !S->IsLumenDetailStudyRunning(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::ScanEngineScene) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
             [ SNew(STextBlock).Text(this, &SGraphicsOptimizerPanel::GetEngineSceneText) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Copy Scene Diagnosis Report")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Copy Scene Diagnosis Report")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->GetEngineSceneReport().IsEmpty(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::CopyEngineSceneReport) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Run Lumen Screen-Probe A/B")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Run Lumen Screen-Probe A/B")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->IsFullAnalysisRunning() && !S->GetRunner().IsRunning() && !S->IsShadowStudyRunning() && !S->IsGpuTraceCaptureRunning() && !S->IsLumenDetailStudyRunning() && !S->IsVisualComparisonRunning(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::RunLumenDetailStudy) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Open Lumen Detail A/B Image")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Open Lumen Detail A/B Image")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->GetLumenDetailImagePath().IsEmpty(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::OpenLumenDetailImage) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
             [ SNew(STextBlock).Text(this, &SGraphicsOptimizerPanel::GetLumenDetailText) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Copy Lumen Detail Report")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Copy Lumen Detail Report")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->IsLumenDetailStudyRunning() && !S->GetLumenDetailReport().IsEmpty(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::CopyLumenDetailReport) ]
                 ]
             ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 8)
             [ SNew(SExpandableArea)
-                .AreaTitle(FText::FromString(TEXT("Complete analysis and final decision")))
+                .AreaTitle(FText::FromString(GOSTR("Complete analysis and final decision")))
                 .InitiallyCollapsed(true)
                 .BodyContent()
                 [ SNew(SVerticalBox)
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(STextBlock).Text(FText::FromString(TEXT("Runs settings search, GPU pass A/B, scene scan, up to 3 shadow groups, Lumen A/B, and final images. Automatically copies the completed or stopped report. Motion capture is available separately."))) ]
+            [ SNew(STextBlock).Text(FText::FromString(GOSTR("Runs settings search, GPU pass A/B, scene scan, up to 3 shadow groups, Lumen A/B, and final images. Automatically copies the completed or stopped report. Motion capture is available separately."))) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Run All Analyses + Copy Report")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Run All Analyses + Copy Report")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->GetRunner().IsRunning() && !S->IsVisualComparisonRunning() && !S->IsMotionComparisonRunning() && !S->IsShadowStudyRunning() && !S->IsGpuTraceCaptureRunning() && !S->IsLumenDetailStudyRunning(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::RunBenchmark) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 8)
-            [ SNew(STextBlock).Text(FText::FromString(TEXT("Full analysis decision"))) ]
+            [ SNew(STextBlock).Text(FText::FromString(GOSTR("Full analysis decision"))) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
             [ SNew(STextBlock).Text(this, &SGraphicsOptimizerPanel::GetFullAnalysisText) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Apply Recommended to PIE")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Apply Recommended to PIE")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && S->IsFullAnalysisComplete(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::ApplyFullRecommendation) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Keep Original Settings")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Keep Original Settings")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && S->IsFullAnalysisComplete(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::KeepOriginalFullAnalysis) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Open Final Baseline vs Recommendation Image")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Open Final Baseline vs Recommendation Image")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && S->IsFullAnalysisComplete() && !S->GetComparisonImagePath().IsEmpty(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::OpenComparisonImage) ]
             + SVerticalBox::Slot().AutoHeight().Padding(0, 4)
-            [ SNew(SButton).Text(FText::FromString(TEXT("Copy Full Analysis Report")))
+            [ SNew(SButton).Text(FText::FromString(GOSTR("Copy Full Analysis Report")))
                 .IsEnabled_Lambda([this]() { UGraphicsOptimizerSubsystem* S = GetSubsystem(); return S && !S->IsFullAnalysisRunning() && !S->GetFullAnalysisReport().IsEmpty(); })
                 .OnClicked(this, &SGraphicsOptimizerPanel::CopyFullAnalysisReport) ]
                 ]
             ]
-        ]
-    ];
+        ];
 }
 
 FText SGraphicsOptimizerPanel::GetStatUnitText() const
@@ -350,46 +378,46 @@ FText SGraphicsOptimizerPanel::GetStatUnitText() const
     UGameViewportClient* Viewport = GameInstance ? GameInstance->GetGameViewportClient() : nullptr;
     const FStatUnitData* Unit = Viewport ? Viewport->GetStatUnitData() : nullptr;
     if (!Viewport || !Viewport->IsStatEnabled(TEXT("Unit")) || !Unit)
-        return FText::FromString(TEXT("Engine stat unit: inactive (enabled automatically during a benchmark)."));
-    return FText::FromString(FString::Printf(TEXT("Engine stat unit now (smoothed): Frame %.2f | Game %.2f | Draw %.2f | GPU %.2f ms"),
+        return FText::FromString(GOSTR("Engine stat unit: inactive (enabled automatically during a benchmark)."));
+    return FText::FromString(FGraphicsOptimizerLocalization::Printf(TEXT("Engine stat unit now (smoothed): Frame %.2f | Game %.2f | Draw %.2f | GPU %.2f ms"),
         Unit->FrameTime, Unit->GameThreadTime, Unit->RenderThreadTime, Unit->GPUFrameTime[0]));
 }
 
 FText SGraphicsOptimizerPanel::GetStatusText() const
 {
     UGraphicsOptimizerSubsystem* Subsystem = GetSubsystem();
-    if (!Subsystem) return FText::FromString(TEXT("Start PIE to enable benchmarking."));
+    if (!Subsystem) return FText::FromString(GOSTR("Start PIE to enable benchmarking."));
     const FExperimentRunner& Runner = Subsystem->GetRunner();
     const Scalability::FQualityLevels Current = Scalability::GetQualityLevels();
     const FString Resolution = Current.ResolutionQuality == 0.0f
         ? (Runner.GetObservedBaselineResolutionScale() > 0.0f
-            ? FString::Printf(TEXT("project default (observed primary %.1f%%)"), Runner.GetObservedBaselineResolutionScale())
-            : TEXT("project default"))
+            ? FGraphicsOptimizerLocalization::Printf(TEXT("project default (observed primary %.1f%%)"), Runner.GetObservedBaselineResolutionScale())
+            : GOTEXT("project default"))
         : FString::Printf(TEXT("%.0f%%"), Current.ResolutionQuality);
     const FString EffectiveCap = Runner.GetFrameRateCapFPS() > 0.0f
-        ? FString::Printf(TEXT("%.1f FPS"), Runner.GetFrameRateCapFPS()) : TEXT("none reported");
+        ? FString::Printf(TEXT("%.1f FPS"), Runner.GetFrameRateCapFPS()) : GOTEXT("none reported");
     const FString CapWarning = Runner.GetFrameRateCapFPS() > 0.0f &&
         Runner.GetOptions().TargetFPS >= Runner.GetFrameRateCapFPS() - 0.5f
-        ? FString(TEXT("\nWarning: target is at or above the engine tick cap; raise the cap before judging target FPS."))
+        ? FString(GOTEXT("\nWarning: target is at or above the engine tick cap; raise the cap before judging target FPS."))
         : FString();
-    FString Status = FString::Printf(
+    FString Status = FGraphicsOptimizerLocalization::Printf(
         TEXT("State: %s\nGPU: %s\nEffective max tick rate: %s%s\nCurrent: resolution %s, shadow %d, GI %d, reflection %d, post %d, texture %d, effects %d\nApplied selection active: %s\nPreset path: %s%s%s%s%s"),
-        StateLabel(Runner.GetState()), *GRHIAdapterName, *EffectiveCap, *CapWarning, *Resolution, Current.ShadowQuality,
+        GOTR(StateLabel(Runner.GetState())), *GRHIAdapterName, *EffectiveCap, *CapWarning, *Resolution, Current.ShadowQuality,
         Current.GlobalIlluminationQuality, Current.ReflectionQuality, Current.PostProcessQuality,
-        Current.TextureQuality, Current.EffectsQuality, Subsystem->HasAppliedConfiguration() ? TEXT("yes") : TEXT("no"),
+        Current.TextureQuality, Current.EffectsQuality, Subsystem->HasAppliedConfiguration() ? GOTEXT("yes") : GOTEXT("no"),
         *Subsystem->GetSavedPresetPath(),
-        Subsystem->GetLastActionMessage().IsEmpty() ? TEXT("") : TEXT("\nAction: "), *Subsystem->GetLastActionMessage(),
-        Runner.GetLastError().IsEmpty() ? TEXT("") : TEXT("\nError: "), *Runner.GetLastError());
-    if (Subsystem->IsVisualComparisonRunning()) Status += TEXT("\nA/B capture: running");
-    if (Subsystem->IsMotionComparisonRunning()) Status += TEXT("\nA/D motion comparison: running");
-    if (Subsystem->IsShadowStudyRunning()) Status += TEXT("\nShadow caster A/B: running");
-    if (Subsystem->IsGpuTraceCaptureRunning()) Status += TEXT("\nGPU trace capture: running");
+        Subsystem->GetLastActionMessage().IsEmpty() ? TEXT("") : GOTEXT("\nAction: "), *Subsystem->GetLastActionMessage(),
+        Runner.GetLastError().IsEmpty() ? TEXT("") : GOTEXT("\nError: "), *Runner.GetLastError());
+    if (Subsystem->IsVisualComparisonRunning()) Status += GOTEXT("\nA/B capture: running");
+    if (Subsystem->IsMotionComparisonRunning()) Status += GOTEXT("\nA/D motion comparison: running");
+    if (Subsystem->IsShadowStudyRunning()) Status += GOTEXT("\nShadow caster A/B: running");
+    if (Subsystem->IsGpuTraceCaptureRunning()) Status += GOTEXT("\nGPU trace capture: running");
     if (!Subsystem->GetComparisonImagePath().IsEmpty())
-        Status += TEXT("\nA/B image (left baseline, right selected): ") + Subsystem->GetComparisonImagePath();
+        Status += GOTEXT("\nA/B image (left baseline, right selected): ") + Subsystem->GetComparisonImagePath();
     if (!Subsystem->GetMotionVideoPath().IsEmpty())
-        Status += TEXT("\nA/D motion video: ") + Subsystem->GetMotionVideoPath();
+        Status += GOTEXT("\nA/D motion video: ") + Subsystem->GetMotionVideoPath();
     if (!Subsystem->GetShadowStudyImagePath().IsEmpty())
-        Status += TEXT("\nShadow A/B image: ") + Subsystem->GetShadowStudyImagePath();
+        Status += GOTEXT("\nShadow A/B image: ") + Subsystem->GetShadowStudyImagePath();
     return FText::FromString(Status);
 }
 
@@ -398,7 +426,7 @@ FText SGraphicsOptimizerPanel::GetMotionText() const
     const UGraphicsOptimizerSubsystem* Subsystem = GetSubsystem();
     return Subsystem && !Subsystem->GetMotionReport().IsEmpty()
         ? FText::FromString(Subsystem->GetMotionReport())
-        : FText::FromString(TEXT("Motion results appear here after the 4-second A/D comparison."));
+        : FText::FromString(GOSTR("Motion results appear here after the 4-second A/D comparison."));
 }
 
 FText SGraphicsOptimizerPanel::GetShadowCandidateText() const
@@ -406,7 +434,7 @@ FText SGraphicsOptimizerPanel::GetShadowCandidateText() const
     const UGraphicsOptimizerSubsystem* Subsystem = GetSubsystem();
     return Subsystem && !Subsystem->GetShadowCandidateList().IsEmpty()
         ? FText::FromString(Subsystem->GetShadowCandidateList())
-        : FText::FromString(TEXT("No shadow scan yet."));
+        : FText::FromString(GOSTR("No shadow scan yet."));
 }
 
 FText SGraphicsOptimizerPanel::GetShadowStudyText() const
@@ -414,7 +442,7 @@ FText SGraphicsOptimizerPanel::GetShadowStudyText() const
     const UGraphicsOptimizerSubsystem* Subsystem = GetSubsystem();
     return Subsystem && !Subsystem->GetShadowStudyReport().IsEmpty()
         ? FText::FromString(Subsystem->GetShadowStudyReport())
-        : FText::FromString(TEXT("Choose a scanned mesh group. The study pauses gameplay, measures the current scene, disables only that group's CastShadow during the second pass, and restores it."));
+        : FText::FromString(GOSTR("Choose a scanned mesh group. The study pauses gameplay, measures the current scene, disables only that group's CastShadow during the second pass, and restores it."));
 }
 
 FText SGraphicsOptimizerPanel::GetGpuTraceText() const
@@ -432,7 +460,7 @@ FText SGraphicsOptimizerPanel::GetFullAnalysisText() const
     if (!Subsystem) return FText::GetEmpty();
     if (Subsystem->IsFullAnalysisRunning())
         return FText::FromString(Subsystem->GetFullAnalysisProgress() +
-            TEXT(" Keep PIE focused; results and apply choices appear after every stage finishes."));
+            GOTEXT(" Keep PIE focused; results and apply choices appear after every stage finishes."));
     if (Subsystem->GetFullAnalysisReport().IsEmpty()) return FText::GetEmpty();
     const bool bSameRun = !Subsystem->GetGpuTraceDirectory().IsEmpty() &&
         Subsystem->GetFullAnalysisReport().Contains(Subsystem->GetGpuTraceDirectory());
@@ -445,8 +473,8 @@ FText SGraphicsOptimizerPanel::GetFullAnalysisText() const
     }
     const FString Passes = bSameRun && Subsystem->GetGpuTracePath() == AnalyzedGpuTracePath
         ? GpuPassAnalysis : CachedFullGpuAnalysis;
-    return FText::FromString(Subsystem->GetFullAnalysisReport() + TEXT("\n8. GPU pass timer comparison\n") +
-        (Passes.IsEmpty() ? TEXT("Analysis pending or unavailable.\n") : Passes));
+    return FText::FromString(Subsystem->GetFullAnalysisReport() + GOTEXT("\n8. GPU pass timer comparison\n") +
+        (Passes.IsEmpty() ? GOTEXT("Analysis pending or unavailable.\n") : Passes));
 }
 
 FText SGraphicsOptimizerPanel::GetEngineSceneText() const
@@ -520,51 +548,51 @@ const FSlateBrush* SGraphicsOptimizerPanel::GetShadowBrush() const
 FText SGraphicsOptimizerPanel::GetResultsText() const
 {
     UGraphicsOptimizerSubsystem* Subsystem = GetSubsystem();
-    if (!Subsystem) return FText::FromString(TEXT("No active PIE session."));
+    if (!Subsystem) return FText::FromString(GOSTR("No active PIE session."));
     FString Lines;
     for (const FGraphicsExperimentResult& Result : Subsystem->GetRunner().GetResults())
     {
         const FGraphicsPerformanceSummary& P = Result.Performance;
         const FString CapLabel = Result.bFPSComparisonLimited
-            ? FString::Printf(TEXT(", capped at %.1f FPS"), Result.FrameRateCapFPS) : FString();
+            ? FGraphicsOptimizerLocalization::Printf(TEXT(", capped at %.1f FPS"), Result.FrameRateCapFPS) : FString();
         const FString FPSLabel = FMath::Abs(P.AverageFPS - Subsystem->GetRunner().GetOptions().TargetFPS) < 0.01
             ? FString::Printf(TEXT("%.4f"), P.AverageFPS)
             : FString::Printf(TEXT("%.2f"), P.AverageFPS);
-        Lines += FString::Printf(TEXT("#%d %s | %s FPS (%+.2f%s) | frame %.2f ms | 1%% low %.1f FPS | game %.2f ms | "),
+        Lines += FGraphicsOptimizerLocalization::Printf(TEXT("#%d %s | %s FPS (%+.2f%s) | frame %.2f ms | 1%% low %.1f FPS | game %.2f ms | "),
             Result.ExperimentNumber, *Result.Label, *FPSLabel, Result.FPSDifference, *CapLabel,
             P.AverageFrameMS, P.OnePercentLowFPS, P.AverageGameMS);
         if (P.RenderSamples > 0)
-            Lines += FString::Printf(TEXT("render %.2f ms (direct) | "), P.AverageRenderMS);
+            Lines += FGraphicsOptimizerLocalization::Printf(TEXT("render %.2f ms (direct) | "), P.AverageRenderMS);
         else if (P.StatUnitRenderMS >= 0.01)
-            Lines += FString::Printf(TEXT("render %.2f ms (stat unit Draw) | "), P.StatUnitRenderMS);
+            Lines += FGraphicsOptimizerLocalization::Printf(TEXT("render %.2f ms (stat unit Draw) | "), P.StatUnitRenderMS);
         else
-            Lines += TEXT("render unavailable | ");
+            Lines += GOTEXT("render unavailable | ");
         Lines += P.RenderCriticalSamples > 0
-            ? FString::Printf(TEXT("render critical %.2f ms (includes waits) | "), P.AverageRenderCriticalMS)
-            : TEXT("render critical unavailable | ");
-        Lines += P.GPUSamples > 0 ? FString::Printf(TEXT("GPU %.2f ms (%d samples)"), P.AverageGPUMS, P.GPUSamples) : TEXT("GPU unavailable");
+            ? FGraphicsOptimizerLocalization::Printf(TEXT("render critical %.2f ms (includes waits) | "), P.AverageRenderCriticalMS)
+            : GOTEXT("render critical unavailable | ");
+        Lines += P.GPUSamples > 0 ? FGraphicsOptimizerLocalization::Printf(TEXT("GPU %.2f ms (%d samples)"), P.AverageGPUMS, P.GPUSamples) : GOTEXT("GPU unavailable");
         if (Result.ObservedPrimaryResolutionScale > 0.0f)
-            Lines += FString::Printf(TEXT(" | observed primary %.1f%%"), Result.ObservedPrimaryResolutionScale);
+            Lines += FGraphicsOptimizerLocalization::Printf(TEXT(" | observed primary %.1f%%"), Result.ObservedPrimaryResolutionScale);
         if (P.LongHitchSamples > 0)
-            Lines += FString::Printf(TEXT(" | %d long hitches (max %.0f ms)"), P.LongHitchSamples, P.LongestFrameMS);
-        Lines += FString::Printf(TEXT(" | target %s\n"),
-            !Result.bTargetEvaluationValid ? TEXT("inconclusive (frame cap)") : Result.bMetTargetFPS ? TEXT("met") : TEXT("missed"));
+            Lines += FGraphicsOptimizerLocalization::Printf(TEXT(" | %d long hitches (max %.0f ms)"), P.LongHitchSamples, P.LongestFrameMS);
+        Lines += FGraphicsOptimizerLocalization::Printf(TEXT(" | target %s\n"),
+            !Result.bTargetEvaluationValid ? GOTEXT("inconclusive (frame cap)") : Result.bMetTargetFPS ? GOTEXT("met") : GOTEXT("missed"));
         if (P.StatUnitSamples > 0)
         {
-            Lines += FString::Printf(TEXT("  stat unit avg (%d): Frame %.2f | Game %.2f | Draw %.4f | GPU %.2f ms\n"),
+            Lines += FGraphicsOptimizerLocalization::Printf(TEXT("  stat unit avg (%d): Frame %.2f | Game %.2f | Draw %.4f | GPU %.2f ms\n"),
                 P.StatUnitSamples, P.StatUnitFrameMS, P.StatUnitGameMS, P.StatUnitRenderMS, P.StatUnitGPUMS);
-            Lines += FString::Printf(TEXT("  plugin - stat unit: Frame %+.2f | Game %+.2f | "),
+            Lines += FGraphicsOptimizerLocalization::Printf(TEXT("  plugin - stat unit: Frame %+.2f | Game %+.2f | "),
                 P.AverageFrameMS - P.StatUnitFrameMS, P.AverageGameMS - P.StatUnitGameMS);
             Lines += P.RenderSamples > 0 && P.StatUnitRenderMS >= 0.01
                 ? FString::Printf(TEXT("Draw %+.2f | "), P.AverageRenderMS - P.StatUnitRenderMS)
-                : TEXT("Draw unavailable | ");
+                : GOTEXT("Draw unavailable | ");
             Lines += P.GPUSamples > 0 && P.StatUnitGPUMS > 0.0
                 ? FString::Printf(TEXT("GPU %+.2f ms\n"), P.AverageGPUMS - P.StatUnitGPUMS)
-                : TEXT("GPU unavailable\n");
+                : GOTEXT("GPU unavailable\n");
         }
-        else Lines += TEXT("  stat unit avg: unavailable\n");
+        else Lines += GOTEXT("  stat unit avg: unavailable\n");
     }
-    return FText::FromString(Lines.IsEmpty() ? TEXT("No results yet.") : Lines);
+    return FText::FromString(Lines.IsEmpty() ? GOSTR("No results yet.") : Lines);
 }
 
 FText SGraphicsOptimizerPanel::GetOptimizationText() const
@@ -574,46 +602,48 @@ FText SGraphicsOptimizerPanel::GetOptimizationText() const
     const FExperimentRunner& Runner = Subsystem->GetRunner();
     if (!Runner.WasOptimizationRequested()) return FText::GetEmpty();
     if (Runner.GetState() == EGraphicsOptimizerState::Failed)
-        return FText::FromString(TEXT("Optimization stopped without a suggestion."));
+        return FText::FromString(GOSTR("Optimization stopped without a suggestion."));
     if (Runner.GetState() != EGraphicsOptimizerState::Completed)
-        return FText::FromString(TEXT("Optimization is running; the original settings will be restored."));
+        return FText::FromString(GOSTR("Optimization is running; the original settings will be restored."));
     const int32 Index = Runner.GetBestResultIndex();
     if (!Runner.GetResults().IsValidIndex(Index))
-        return FText::FromString(TEXT("No valid optimization result."));
+        return FText::FromString(GOSTR("No valid optimization result."));
     const FGraphicsExperimentResult& Best = Runner.GetResults()[Index];
     const Scalability::FQualityLevels& Q = Best.AppliedConfiguration;
     const FString Resolution = Q.ResolutionQuality == 0.0f
         ? (Best.ObservedPrimaryResolutionScale > 0.0f
-            ? FString::Printf(TEXT("project default (observed primary %.1f%%)"), Best.ObservedPrimaryResolutionScale)
-            : TEXT("project default"))
+            ? FGraphicsOptimizerLocalization::Printf(TEXT("project default (observed primary %.1f%%)"), Best.ObservedPrimaryResolutionScale)
+            : GOSTR("project default"))
         : FString::Printf(TEXT("%.0f%%"), Q.ResolutionQuality);
     const int32 FastestIndex = Runner.GetFastestResultIndex();
     const FGraphicsExperimentResult& Fastest = Runner.GetResults().IsValidIndex(FastestIndex)
         ? Runner.GetResults()[FastestIndex] : Best;
     const FGraphicsValidationResult* SelectedValidation = Runner.GetSelectedValidation();
-    const TCHAR* Verdict = Runner.HasMetOptimizationTarget() ? TEXT("Target met") :
-        Runner.IsValidationComplete() && Runner.HadTargetBeforeValidation() ? TEXT("Target not repeatably met") :
-        !Fastest.bTargetEvaluationValid ? TEXT("Target inconclusive (frame cap)") : TEXT("Target missed");
-    FString Text = FString::Printf(
+    // FString (not const TCHAR*): Verdict is used in a later statement, and GOSTR's
+    // temporary would not outlive this one, so it must be held in a real FString.
+    const FString Verdict = Runner.HasMetOptimizationTarget() ? GOSTR("Target met") :
+        Runner.IsValidationComplete() && Runner.HadTargetBeforeValidation() ? GOSTR("Target not repeatably met") :
+        !Fastest.bTargetEvaluationValid ? GOSTR("Target inconclusive (frame cap)") : GOSTR("Target missed");
+    FString Text = FGraphicsOptimizerLocalization::Printf(
         TEXT("%s; quality-preserving measured candidate: %s | %.2f FPS%s | resolution %s, shadow %d, GI %d, reflection %d, post %d, texture %d, effects %d"),
-        Verdict,
+        *Verdict,
         *Best.Label, SelectedValidation ? SelectedValidation->MedianFPS : Best.Performance.AverageFPS,
-        SelectedValidation ? TEXT(" (validation median)") : TEXT(""), *Resolution, Q.ShadowQuality,
+        SelectedValidation ? GOTEXT(" (validation median)") : TEXT(""), *Resolution, Q.ShadowQuality,
         Q.GlobalIlluminationQuality, Q.ReflectionQuality, Q.PostProcessQuality, Q.TextureQuality, Q.EffectsQuality);
     if (Fastest.AppliedConfiguration != Best.AppliedConfiguration)
     {
-        Text += FString::Printf(TEXT("\nFastest observation: %s | %.2f FPS. Quality-step gain threshold: %.2f FPS."),
+        Text += FGraphicsOptimizerLocalization::Printf(TEXT("\nFastest observation: %s | %.2f FPS. Quality-step gain threshold: %.2f FPS."),
             *Fastest.Label, Fastest.Performance.AverageFPS, Runner.GetMinimumUsefulGainFPS());
     }
     for (const FGraphicsValidationResult& Entry : Runner.GetValidationResults())
     {
         if (!Runner.GetResults().IsValidIndex(Entry.SourceResultIndex)) continue;
-        Text += FString::Printf(TEXT("\nValidation %s: median %.4f FPS, range %.4f-%.4f FPS, target met %d/%d%s"),
+        Text += FGraphicsOptimizerLocalization::Printf(TEXT("\nValidation %s: median %.4f FPS, range %.4f-%.4f FPS, target met %d/%d%s"),
             *Runner.GetResults()[Entry.SourceResultIndex].Label, Entry.MedianFPS, Entry.MinimumFPS,
             Entry.MaximumFPS, Entry.TargetMetRuns, FOptimizationManager::ValidationRunsPerCandidate,
-            Entry.bAllTargetEvaluationsValid ? TEXT("") : TEXT(" (frame-cap verdict inconclusive)"));
+            Entry.bAllTargetEvaluationsValid ? TEXT("") : GOTEXT(" (frame-cap verdict inconclusive)"));
     }
-    Text += TEXT("\nMeasured in this scene only. Benchmark settings were restored; Apply and Save are separate actions.");
+    Text += GOTEXT("\nMeasured in this scene only. Benchmark settings were restored; Apply and Save are separate actions.");
     return FText::FromString(Text);
 }
 
@@ -628,11 +658,11 @@ FText SGraphicsOptimizerPanel::GetSelectedResultText() const
 {
     const UGraphicsOptimizerSubsystem* Subsystem = GetSubsystem();
     if (!Subsystem || !Subsystem->GetRunner().GetResults().IsValidIndex(GetSelectedResultIndex()))
-        return FText::FromString(TEXT("No result selected. Run Optimization or enter a result number from Run Benchmark."));
+        return FText::FromString(GOSTR("No result selected. Run Optimization or enter a result number from Run Benchmark."));
     const FGraphicsExperimentResult& Result = Subsystem->GetRunner().GetResults()[GetSelectedResultIndex()];
     const FString Resolution = Result.AppliedConfiguration.ResolutionQuality == 0.0f
-        ? FString(TEXT("project default")) : FString::Printf(TEXT("%.0f%%"), Result.AppliedConfiguration.ResolutionQuality);
-    return FText::FromString(FString::Printf(TEXT("Selected #%d: %s | resolution %s, shadow %d, GI %d, reflection %d, post %d, texture %d, effects %d"),
+        ? GOSTR("project default") : FString::Printf(TEXT("%.0f%%"), Result.AppliedConfiguration.ResolutionQuality);
+    return FText::FromString(FGraphicsOptimizerLocalization::Printf(TEXT("Selected #%d: %s | resolution %s, shadow %d, GI %d, reflection %d, post %d, texture %d, effects %d"),
         Result.ExperimentNumber, *Result.Label, *Resolution,
         Result.AppliedConfiguration.ShadowQuality, Result.AppliedConfiguration.GlobalIlluminationQuality,
         Result.AppliedConfiguration.ReflectionQuality, Result.AppliedConfiguration.PostProcessQuality,
@@ -687,7 +717,7 @@ void SGraphicsOptimizerPanel::Tick(const FGeometry& AllottedGeometry, const doub
         AnalyzeGpuTrace();
         const FString FullPath = FPaths::Combine(Subsystem->GetFullAnalysisDirectory(), TEXT("FullAnalysisWithGpuPasses.txt"));
         FFileHelper::SaveStringToFile(GetFullAnalysisText().ToString(), *FullPath);
-        Subsystem->ArchiveReport(TEXT("Full:") + Subsystem->GetFullAnalysisDirectory(), TEXT("Full analysis"), GetFullAnalysisText().ToString());
+        Subsystem->ArchiveReport(TEXT("Full:") + Subsystem->GetFullAnalysisDirectory(), GOTEXT("Full analysis"), GetFullAnalysisText().ToString());
     }
     if (bCopyFullReportOnFinish)
     {
@@ -701,7 +731,7 @@ FReply SGraphicsOptimizerPanel::ApplyFullRecommendation()
 {
     if (UGraphicsOptimizerSubsystem* Subsystem = GetSubsystem())
         if (Subsystem->ApplyFullAnalysisRecommendation())
-            Subsystem->ArchiveReport(TEXT("Full:") + Subsystem->GetFullAnalysisDirectory(), TEXT("Full analysis"), GetFullAnalysisText().ToString());
+            Subsystem->ArchiveReport(TEXT("Full:") + Subsystem->GetFullAnalysisDirectory(), GOTEXT("Full analysis"), GetFullAnalysisText().ToString());
     return FReply::Handled();
 }
 
@@ -711,7 +741,7 @@ FReply SGraphicsOptimizerPanel::KeepOriginalFullAnalysis()
     {
         Subsystem->KeepOriginalAfterFullAnalysis();
         if (!Subsystem->GetFullAnalysisReport().IsEmpty())
-            Subsystem->ArchiveReport(TEXT("Full:") + Subsystem->GetFullAnalysisDirectory(), TEXT("Full analysis"), GetFullAnalysisText().ToString());
+            Subsystem->ArchiveReport(TEXT("Full:") + Subsystem->GetFullAnalysisDirectory(), GOTEXT("Full analysis"), GetFullAnalysisText().ToString());
     }
     return FReply::Handled();
 }
@@ -729,7 +759,7 @@ FReply SGraphicsOptimizerPanel::CopyFullAnalysisReport()
             FPlatformApplicationMisc::ClipboardCopy(*Report);
             FFileHelper::SaveStringToFile(Report,
                 *FPaths::Combine(Subsystem->GetFullAnalysisDirectory(), TEXT("FullAnalysisWithGpuPasses.txt")));
-            Subsystem->ArchiveReport(TEXT("Full:") + Subsystem->GetFullAnalysisDirectory(), TEXT("Full analysis"), Report);
+            Subsystem->ArchiveReport(TEXT("Full:") + Subsystem->GetFullAnalysisDirectory(), GOTEXT("Full analysis"), Report);
         }
     }
     return FReply::Handled();
@@ -795,7 +825,7 @@ void SGraphicsOptimizerPanel::SaveGpuAnalysisHistory()
 {
     UGraphicsOptimizerSubsystem* Subsystem = GetSubsystem();
     if (!Subsystem || Subsystem->GetGpuTracePath() != AnalyzedGpuTracePath || GpuPassAnalysis.IsEmpty()) return;
-    Subsystem->ArchiveReport(TEXT("GPU:") + Subsystem->GetGpuTraceDirectory(), TEXT("GPU study with timer analysis"),
+    Subsystem->ArchiveReport(TEXT("GPU:") + Subsystem->GetGpuTraceDirectory(), GOTEXT("GPU study with timer analysis"),
         Subsystem->GetGpuTraceReport() + TEXT("\n") + GpuPassAnalysis);
     if (!Subsystem->GetFullAnalysisReport().IsEmpty() && !Subsystem->GetGpuTraceDirectory().IsEmpty() &&
         Subsystem->GetFullAnalysisReport().Contains(Subsystem->GetGpuTraceDirectory()))
@@ -812,9 +842,9 @@ FReply SGraphicsOptimizerPanel::CopyReport()
     UGraphicsOptimizerSubsystem* Subsystem = GetSubsystem();
     if (!Subsystem) return FReply::Handled();
     const FGraphicsBenchmarkOptions& Run = Subsystem->GetRunner().GetOptions();
-    const FString Report = FString::Printf(TEXT("Graphics Optimizer | latest results from possibly separate runs; not cumulative history\nMode: %s\nTarget: %.1f FPS\nMeasurement: %.1f sec\nStatic scene: %s\nMinimum useful gain: %.2f FPS per setting\n"),
-        Run.bRunOptimization ? TEXT("Optimization") : TEXT("Benchmark"), Run.TargetFPS,
-        Run.MeasurementSeconds, Run.bFreezeGameplay ? TEXT("yes") : TEXT("no"), Run.MinimumUsefulGainFPS)
+    const FString Report = FGraphicsOptimizerLocalization::Printf(TEXT("Graphics Optimizer | latest results from possibly separate runs; not cumulative history\nMode: %s\nTarget: %.1f FPS\nMeasurement: %.1f sec\nStatic scene: %s\nMinimum useful gain: %.2f FPS per setting\n"),
+        Run.bRunOptimization ? GOTEXT("Optimization") : GOTEXT("Benchmark"), Run.TargetFPS,
+        Run.MeasurementSeconds, Run.bFreezeGameplay ? GOTEXT("yes") : GOTEXT("no"), Run.MinimumUsefulGainFPS)
         + GetStatusText().ToString() + TEXT("\n") + GetSelectedResultText().ToString()
         + TEXT("\n\n") + GetOptimizationText().ToString()
         + TEXT("\n\n") + GetResultsText().ToString()
@@ -992,21 +1022,21 @@ FReply SGraphicsOptimizerPanel::AnalyzeGpuTrace()
             for (int32 TimerIndex = 0; TimerIndex < 3; ++TimerIndex)
                 TimerMS[Arm][TimerIndex] /= FrameCount;
         }
-        GpuPassAnalysis = TEXT("Targeted GPU pass A/B analysis (inclusive ms per sampled frame; trace boundaries can differ by one GPU frame).\n");
+        GpuPassAnalysis = GOTEXT("Targeted GPU pass A/B analysis (inclusive ms per sampled frame; trace boundaries can differ by one GPU frame).\n");
         if (!bAllTracesRead)
-            GpuPassAnalysis += TEXT("One or more trace files could not be analyzed. Open each .utrace in Unreal Insights.\n");
+            GpuPassAnalysis += GOTEXT("One or more trace files could not be analyzed. Open each .utrace in Unreal Insights.\n");
         else
         {
             for (int32 Arm = 0; Arm < 3; ++Arm)
             {
-                GpuPassAnalysis += FString::Printf(TEXT("%s | %.2f FPS | GPU %.2f ms | %llu GPU events\n"),
-                    Labels[Arm], Performance[Arm].AverageFPS, Performance[Arm].AverageGPUMS, EventCounts[Arm]);
+                GpuPassAnalysis += FGraphicsOptimizerLocalization::Printf(TEXT("%s | %.2f FPS | GPU %.2f ms | %llu GPU events\n"),
+                    GOTR(Labels[Arm]), Performance[Arm].AverageFPS, Performance[Arm].AverageGPUMS, EventCounts[Arm]);
                 for (int32 TimerIndex = 0; TimerIndex < 3; ++TimerIndex)
                     GpuPassAnalysis += FString::Printf(TEXT("  %s: %s\n"), TimerNames[TimerIndex],
-                        bTimerFound[Arm][TimerIndex] ? *FString::Printf(TEXT("%.2f ms"), TimerMS[Arm][TimerIndex]) : TEXT("unavailable"));
+                        bTimerFound[Arm][TimerIndex] ? *FString::Printf(TEXT("%.2f ms"), TimerMS[Arm][TimerIndex]) : GOTEXT("unavailable"));
                 if (Arm > 0)
                 {
-                    GpuPassAnalysis += FString::Printf(TEXT("  vs baseline: FPS %+.2f | whole GPU %+.2f ms\n"),
+                    GpuPassAnalysis += FGraphicsOptimizerLocalization::Printf(TEXT("  vs baseline: FPS %+.2f | whole GPU %+.2f ms\n"),
                         Performance[Arm].AverageFPS - Performance[0].AverageFPS,
                         Performance[Arm].AverageGPUMS - Performance[0].AverageGPUMS);
                     for (int32 TimerIndex = 0; TimerIndex < 3; ++TimerIndex)
@@ -1015,7 +1045,7 @@ FReply SGraphicsOptimizerPanel::AnalyzeGpuTrace()
                                 TimerMS[Arm][TimerIndex] - TimerMS[0][TimerIndex]);
                 }
             }
-            GpuPassAnalysis += TEXT("Timer regions can be nested; their times must not be added. Check both saved images for visible quality changes before choosing a setting. A/B measurements are scene-specific and do not automatically apply or save the candidates.\n");
+            GpuPassAnalysis += GOTEXT("Timer regions can be nested; their times must not be added. Check both saved images for visible quality changes before choosing a setting. A/B measurements are scene-specific and do not automatically apply or save the candidates.\n");
         }
         AnalyzedGpuTracePath = Path;
         const FString AnalysisPath = FPaths::Combine(Subsystem->GetGpuTraceDirectory(), TEXT("GpuPassStudyAnalysis.txt"));
@@ -1031,7 +1061,7 @@ FReply SGraphicsOptimizerPanel::AnalyzeGpuTrace()
     TSharedPtr<const TraceServices::IAnalysisSession> Session = Service.IsValid() ? Service->Analyze(*Path) : nullptr;
     if (!Session.IsValid())
     {
-        GpuPassAnalysis = TEXT("Could not analyze the trace file. Open it in Unreal Insights and inspect the GPU track.");
+        GpuPassAnalysis = GOSTR("Could not analyze the trace file. Open it in Unreal Insights and inspect the GPU track.");
         return FReply::Handled();
     }
 
@@ -1079,28 +1109,28 @@ FReply SGraphicsOptimizerPanel::AnalyzeGpuTrace()
     TArray<FPassTotal> Sorted;
     Totals.GenerateValueArray(Sorted);
     Sorted.Sort([](const FPassTotal& A, const FPassTotal& B) { return A.InclusiveMS > B.InclusiveMS; });
-    GpuPassAnalysis = FString::Printf(TEXT("GPU pass analysis: %llu timing events, %d named timers. %llu per-frame Unaccounted markers omitted from the pass ranking. Inclusive time across the captured GPU timelines. Nested timers overlap; do not add rows together.\n"),
+    GpuPassAnalysis = FGraphicsOptimizerLocalization::Printf(TEXT("GPU pass analysis: %llu timing events, %d named timers. %llu per-frame Unaccounted markers omitted from the pass ranking. Inclusive time across the captured GPU timelines. Nested timers overlap; do not add rows together.\n"),
         GpuEventCount, Sorted.Num(), UnaccountedFrameEvents);
     if (Sorted.IsEmpty())
     {
-        GpuPassAnalysis += TEXT("No GPU timing events were found. Open the trace in Unreal Insights and check whether the GPU track exists; this may require GPU trace support in the active RHI/build.\n");
+        GpuPassAnalysis += GOTEXT("No GPU timing events were found. Open the trace in Unreal Insights and check whether the GPU track exists; this may require GPU trace support in the active RHI/build.\n");
     }
     else
     {
         const int32 FrameCount = FMath::Max(1, Subsystem->GetGpuTraceFrameSamples());
-        GpuPassAnalysis += TEXT("Largest named GPU timer regions in this capture:\n");
+        GpuPassAnalysis += GOTEXT("Largest named GPU timer regions in this capture:\n");
         for (int32 Index = 0; Index < FMath::Min(5, Sorted.Num()); ++Index)
-            GpuPassAnalysis += FString::Printf(TEXT("- %s: about %.2f ms per sampled frame (%llu calls)\n"),
+            GpuPassAnalysis += FGraphicsOptimizerLocalization::Printf(TEXT("- %s: about %.2f ms per sampled frame (%llu calls)\n"),
                 *Sorted[Index].Name, Sorted[Index].InclusiveMS / FrameCount, Sorted[Index].Calls);
-        GpuPassAnalysis += TEXT("These are inclusive GPU timer regions, not independent optimization gains. Parent and child timers can overlap.\n\n");
-        GpuPassAnalysis += FString::Printf(TEXT("Top GPU timers by inclusive total; ms/frame divides by %d sampled frames (approximate if GPU events lag the capture boundary):\n"), FrameCount);
+        GpuPassAnalysis += GOTEXT("These are inclusive GPU timer regions, not independent optimization gains. Parent and child timers can overlap.\n\n");
+        GpuPassAnalysis += FGraphicsOptimizerLocalization::Printf(TEXT("Top GPU timers by inclusive total; ms/frame divides by %d sampled frames (approximate if GPU events lag the capture boundary):\n"), FrameCount);
         for (int32 Index = 0; Index < FMath::Min(20, Sorted.Num()); ++Index)
         {
             const FPassTotal& Pass = Sorted[Index];
-            GpuPassAnalysis += FString::Printf(TEXT("%2d. %s | %.2f ms/frame | %.1f ms total | %llu calls\n"),
+            GpuPassAnalysis += FGraphicsOptimizerLocalization::Printf(TEXT("%2d. %s | %.2f ms/frame | %.1f ms total | %llu calls\n"),
                 Index + 1, *Pass.Name, Pass.InclusiveMS / FrameCount, Pass.InclusiveMS, Pass.Calls);
         }
-        GpuPassAnalysis += TEXT("Look for ShadowDepths/VSM, Lumen, Translucency, Niagara or other scene-specific timers in the full Insights GPU track before selecting an optimization experiment.\n");
+        GpuPassAnalysis += GOTEXT("Look for ShadowDepths/VSM, Lumen, Translucency, Niagara or other scene-specific timers in the full Insights GPU track before selecting an optimization experiment.\n");
     }
     AnalyzedGpuTracePath = Path;
     const FString AnalysisPath = FPaths::Combine(Subsystem->GetGpuTraceDirectory(), TEXT("GpuPassAnalysis.txt"));
@@ -1135,7 +1165,7 @@ FReply SGraphicsOptimizerPanel::CopyGpuTraceReport()
         if (!Subsystem->GetGpuTraceReport().IsEmpty())
         {
             const FString Analysis = Subsystem->GetGpuTracePath() == AnalyzedGpuTracePath
-                ? GpuPassAnalysis : TEXT("GPU pass analysis pending. Press Analyze GPU Passes, then copy again.");
+                ? GpuPassAnalysis : GOSTR("GPU pass analysis pending. Press Analyze GPU Passes, then copy again.");
             const FString Report = Subsystem->GetGpuTraceReport() + TEXT("\n") + Analysis;
             FPlatformApplicationMisc::ClipboardCopy(*Report);
         }

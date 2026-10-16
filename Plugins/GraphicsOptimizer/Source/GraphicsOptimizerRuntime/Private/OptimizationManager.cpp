@@ -1,5 +1,6 @@
 #include "OptimizationManager.h"
 #include "GraphicsSettingManager.h"
+#include "GraphicsOptimizerLocalization.h"
 
 namespace
 {
@@ -101,9 +102,9 @@ bool FOptimizationManager::NextConfiguration(const TArray<FGraphicsExperimentRes
             OutConfiguration = Best;
             FGraphicsSettingManager::SetValue(OutConfiguration, Setting, OriginalValue);
             const FString ValueLabel = Setting == EGraphicsSetting::ResolutionScale && OriginalValue == 0.0f
-                ? FString(TEXT("project default")) : FString::Printf(TEXT("%.0f"), OriginalValue);
-            OutLabel = FString::Printf(TEXT("Quality recovery: restore %s to %s"),
-                FGraphicsSettingManager::GetSettingName(Setting), *ValueLabel);
+                ? FString(GOTEXT("project default")) : FString::Printf(TEXT("%.0f"), OriginalValue);
+            OutLabel = FGraphicsOptimizerLocalization::Printf(TEXT("Quality recovery: restore %s to %s"),
+                GOTR(FGraphicsSettingManager::GetSettingName(Setting)), *ValueLabel);
             return true;
         }
         return false;
@@ -123,8 +124,8 @@ bool FOptimizationManager::NextConfiguration(const TArray<FGraphicsExperimentRes
         OutConfiguration = Best;
         FGraphicsSettingManager::SetValue(OutConfiguration, Candidate.Setting, Candidate.Value);
         FString BaseLabel = Results[BestResultIndex].Label;
-        BaseLabel.RemoveFromStart(TEXT("Combined: "));
-        OutLabel = FString::Printf(TEXT("Combined: %s + %s"), *BaseLabel, *Candidate.Label);
+        BaseLabel.RemoveFromStart(GOTEXT("Combined: "));
+        OutLabel = FGraphicsOptimizerLocalization::Printf(TEXT("Combined: %s + %s"), *BaseLabel, *Candidate.Label);
         return true;
     }
     return false;
@@ -198,7 +199,7 @@ bool FOptimizationManager::NextValidationConfiguration(const TArray<FGraphicsExp
         Entry.RunResultIndices.Num() >= ValidationRunsPerCandidate) return false;
     const FGraphicsExperimentResult& Source = Results[Entry.SourceResultIndex];
     OutConfiguration = Source.AppliedConfiguration;
-    OutLabel = FString::Printf(TEXT("Validation %d/%d: %s"),
+    OutLabel = FGraphicsOptimizerLocalization::Printf(TEXT("Validation %d/%d: %s"),
         Entry.RunResultIndices.Num() + 1, ValidationRunsPerCandidate, *Source.Label);
     return true;
 }

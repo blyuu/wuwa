@@ -1,11 +1,13 @@
 #include "ExperimentRunner.h"
 #include "GraphicsOptimizerRuntime.h"
+#include "GraphicsOptimizerLocalization.h"
 #include "Engine/Engine.h"
 #include "HAL/IConsoleManager.h"
 #include "RHIGlobals.h"
 
 namespace
 {
+// Log-only (UE_LOG at SetState/Abort call sites) - never shown in the UI, left untranslated.
 const TCHAR* StateName(EGraphicsOptimizerState State)
 {
     switch (State)
@@ -53,7 +55,7 @@ void FExperimentRunner::BuildCandidates()
             FGraphicsExperimentCandidate& Candidate = Candidates.AddDefaulted_GetRef();
             Candidate.Setting = Setting;
             Candidate.Value = Current - 1.0f;
-            Candidate.Label = FString::Printf(TEXT("%s %.0f"), FGraphicsSettingManager::GetSettingName(Setting), Candidate.Value);
+            Candidate.Label = FString::Printf(TEXT("%s %.0f"), GOTR(FGraphicsSettingManager::GetSettingName(Setting)), Candidate.Value);
         }
     }
     const float BaselineResolution = Original.ResolutionQuality > 0.0f
@@ -80,8 +82,8 @@ void FExperimentRunner::AddResolutionCandidate(float BaselineResolution)
     Candidate.Setting = EGraphicsSetting::ResolutionScale;
     Candidate.Value = FMath::Max(10.0f, FMath::FloorToFloat(BaselineResolution - 10.0f));
     Candidate.Label = Settings.GetOriginal().ResolutionQuality == 0.0f
-        ? FString::Printf(TEXT("Resolution Scale %.0f%% (from observed %.0f%% default)"), Candidate.Value, BaselineResolution)
-        : FString::Printf(TEXT("Resolution Scale %.0f%%"), Candidate.Value);
+        ? FGraphicsOptimizerLocalization::Printf(TEXT("Resolution Scale %.0f%% (from observed %.0f%% default)"), Candidate.Value, BaselineResolution)
+        : FGraphicsOptimizerLocalization::Printf(TEXT("Resolution Scale %.0f%%"), Candidate.Value);
 }
 
 bool FExperimentRunner::Start(const FGraphicsBenchmarkOptions& InOptions, UGameViewportClient* InViewport)
@@ -116,7 +118,7 @@ bool FExperimentRunner::Start(const FGraphicsBenchmarkOptions& InOptions, UGameV
     {
         UE_LOG(LogGraphicsOptimizer, Warning, TEXT("[GraphicsOptimizer][Benchmark] Target FPS is at or above the engine tick cap; target evaluation will be inconclusive near the cap."));
     }
-    if (!Settings.CaptureOriginal()) { Abort(TEXT("Failed to read current graphics settings.")); return false; }
+    if (!Settings.CaptureOriginal()) { Abort(GOTEXT("Failed to read current graphics settings.")); return false; }
     BuildCandidates();
     AppliedConfiguration = Settings.GetOriginal();
     UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][Benchmark] Starting baseline benchmark."));
@@ -136,7 +138,7 @@ bool FExperimentRunner::CompleteMeasurement(bool bBaseline)
         if (CurrentObservedPrimaryResolutionScale <= 0.0f ||
             FMath::Abs(CurrentObservedPrimaryResolutionScale - ExpectedPrimaryPercentage) > 1.0f)
         {
-            Abort(FString::Printf(TEXT("Expected primary resolution %.1f%% was not verified in the PIE view (observed %.1f%%)."),
+            Abort(FGraphicsOptimizerLocalization::Printf(TEXT("Expected primary resolution %.1f%% was not verified in the PIE view (observed %.1f%%)."),
                 ExpectedPrimaryPercentage, CurrentObservedPrimaryResolutionScale));
             return false;
         }
@@ -149,7 +151,7 @@ bool FExperimentRunner::CompleteMeasurement(bool bBaseline)
         Summary.AverageGPUMS, Summary.GPUSamples, Summary.OnePercentLowFPS);
     if (Summary.FrameSamples < Options.MinimumSamples)
     {
-        Abort(FString::Printf(TEXT("Insufficient frame samples: expected %d, received %d."), Options.MinimumSamples, Summary.FrameSamples));
+        Abort(FGraphicsOptimizerLocalization::Printf(TEXT("Insufficient frame samples: expected %d, received %d."), Options.MinimumSamples, Summary.FrameSamples));
         return false;
     }
     if (Summary.LongHitchSamples > 0)
@@ -196,7 +198,7 @@ bool FExperimentRunner::CompleteMeasurement(bool bBaseline)
     }
     FGraphicsExperimentResult& Result = Results.AddDefaulted_GetRef();
     Result.ExperimentNumber = Results.Num() - 1;
-    Result.Label = bBaseline ? TEXT("Baseline") :
+    Result.Label = bBaseline ? GOTEXT("Baseline") :
         bMeasuringOptimization ? ActiveOptimizationLabel : Candidates[CandidateIndex].Label;
     if (!bBaseline && !bMeasuringOptimization) Result.Candidate = Candidates[CandidateIndex];
     Result.bOptimizationStep = bMeasuringOptimization;
@@ -265,7 +267,7 @@ void FExperimentRunner::AdvanceExperiment()
     SetState(EGraphicsOptimizerState::ApplyingConfiguration);
     const FGraphicsExperimentCandidate& Candidate = Candidates[CandidateIndex];
     UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][Experiment] #%d started: %s, requested=%.1f"), CandidateIndex + 1, *Candidate.Label, Candidate.Value);
-    if (!Settings.ApplyCandidate(Candidate, AppliedConfiguration)) { Abort(TEXT("Failed to apply experiment settings.")); return; }
+    if (!Settings.ApplyCandidate(Candidate, AppliedConfiguration)) { Abort(GOTEXT("Failed to apply experiment settings.")); return; }
     Benchmark.BeginWarmup(Options.WarmupSeconds);
     SetState(EGraphicsOptimizerState::WarmupExperiment);
     UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][Benchmark] Experiment #%d warmup started."), CandidateIndex + 1);
@@ -310,7 +312,7 @@ void FExperimentRunner::AdvanceOptimization()
     UE_LOG(LogGraphicsOptimizer, Log, TEXT("[GraphicsOptimizer][Optimization] Testing %s"), *ActiveOptimizationLabel);
     if (!Settings.ApplyConfiguration(Requested, AppliedConfiguration))
     {
-        Abort(TEXT("Failed to apply combined graphics settings."));
+        Abort(GOTEXT("Failed to apply combined graphics settings."));
         return;
     }
     Benchmark.BeginWarmup(Options.WarmupSeconds);
@@ -344,7 +346,7 @@ void FExperimentRunner::Tick(float ObservedPrimaryResolutionScale)
         else
         {
             SetState(EGraphicsOptimizerState::Restoring);
-            if (!Settings.RestoreOriginal()) { Abort(TEXT("Failed to restore original graphics settings.")); break; }
+            if (!Settings.RestoreOriginal()) { Abort(GOTEXT("Failed to restore original graphics settings.")); break; }
             if (bMeasuringOptimization)
             {
                 if (bMeasuringValidation)
@@ -378,7 +380,7 @@ void FExperimentRunner::FinishRun(bool bFailed)
 {
     SetState(EGraphicsOptimizerState::Restoring);
     const bool bRestored = Settings.RestoreOriginal();
-    if (!bRestored) LastError = TEXT("Original settings could not be restored.");
+    if (!bRestored) LastError = GOSTR("Original settings could not be restored.");
     SetState(bFailed || !bRestored ? EGraphicsOptimizerState::Failed : EGraphicsOptimizerState::Completed);
     if (bFailed || !bRestored)
     {
@@ -430,5 +432,5 @@ void FExperimentRunner::Abort(const FString& Reason)
 
 void FExperimentRunner::Cancel()
 {
-    if (IsRunning()) Abort(TEXT("Benchmark cancelled by user."));
+    if (IsRunning()) Abort(GOTEXT("Benchmark cancelled by user."));
 }
