@@ -12,9 +12,15 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Character/WuwaInputConfig.h"
 #include "DataAsset/CharacterDataAsset.h"
+#include "DataAsset/EnemyDataAsset.h"
 #include "Enemy/EnemyCharacter.h"
+#include "Framework/CombatFeedbackSubsystem.h"
+#include "GameplayTags/WuwaGameplayTags.h"
+#include "Components/CapsuleComponent.h"
 #include "GameAbilities/WuWa_AttributeSetBase.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Animation/AnimInstance.h"
+#include "UObject/UnrealType.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 #include "DrawDebugHelpers.h"
@@ -45,27 +51,58 @@ APlayableCharacter::APlayableCharacter()
 	CameraComponent->bUsePawnControlRotation = false;
 
 	InputMappingContext = nullptr;
+	OnCharacterMovementUpdated.AddDynamic(this, &APlayableCharacter::UpdateAttackTracking);
 }
 
 void APlayableCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	UpdateSprintAnimationState();
+}
 
+
+void APlayableCharacter::UpdateAttackTracking(float DeltaTime, FVector OldLocation, FVector OldVelocity)
+{
 	if (!bTargetAssistActive)
 	{
 		return;
 	}
+	AEnemyCharacter* Target = AttackTrackingTarget.Get();
+	if (!CharacterData || !CharacterData->TargetAssist.bEnabled || !Target || Target->IsDead()
+		|| FVector::DistSquared2D(GetActorLocation(), Target->GetActorLocation())
+			> FMath::Square(CharacterData->TargetAssist.Range * 1.2f))
+	{
+		CancelTargetAssist();
+		return;
+	}
+	const FTargetAssistData& Tracking = CharacterData->TargetAssist;
+	FVector ToTarget = Target->GetActorLocation() - GetActorLocation();
+	ToTarget.Z = 0.f;
+	if (!ToTarget.IsNearlyZero()) TargetAssistGoalRot = FRotator(0.f, ToTarget.Rotation().Yaw, 0.f);
 
 	TargetAssistElapsed += DeltaTime;
 	const float Alpha = FMath::Clamp(TargetAssistElapsed / TargetAssistBlendTime, 0.f, 1.f);
 	const float S = FMath::SmoothStep(0.f, 1.f, Alpha);   // ease in / out so the turn isn't a hard snap
 
-	const FQuat NewRot = FQuat::Slerp(TargetAssistStartRot.Quaternion(), TargetAssistGoalRot.Quaternion(), S);
+	// Called after CharacterMovement has applied this frame's montage root motion.
+	const float TurnSpeed = TargetAssistElapsed <= FMath::Max(Tracking.BlendTime, .18f)
+		? Tracking.InitialTurnSpeed : Tracking.TrackingTurnSpeed;
+	const FQuat NewRot = FMath::RInterpConstantTo(GetActorRotation(), TargetAssistGoalRot,
+		DeltaTime, FMath::Max(0.f, TurnSpeed)).Quaternion();
+	// Root motion owns translation for this window. Never resume the old approach
+	// after it has moved the character away from the original start position.
+	if (IsPlayingRootMotion()) bTargetAssistStepIn = false;
 
 	if (bTargetAssistStepIn)
 	{
-		const FVector NewLoc = FMath::Lerp(TargetAssistStartLoc, TargetAssistGoalLoc, S);
-		SetActorLocationAndRotation(NewLoc, NewRot, true);   // sweep so we stop at walls instead of clipping
+		const float Speed = CharacterData ? FMath::Max(1.f, CharacterData->TargetAssist.ApproachSpeedLimit) : 450.f;
+		const float RemainingGap = FMath::Max(0.f, static_cast<float>(ToTarget.Size()) - Tracking.StopDistance);
+		const float FrameStep = FMath::Min3(RemainingGap, Speed * DeltaTime,
+			static_cast<float>(FVector::Distance(TargetAssistGoalLoc, TargetAssistStartLoc)) * (S - PreviousAssistAlpha));
+		const FVector Delta = ToTarget.GetSafeNormal() * FrameStep;
+		FHitResult Hit;
+		SetActorLocationAndRotation(GetActorLocation() + Delta, NewRot, true, &Hit);
+		if (Hit.bBlockingHit) bTargetAssistStepIn = false;
 	}
 	else
 	{
@@ -82,15 +119,30 @@ void APlayableCharacter::Tick(float DeltaTime)
 	}
 #endif
 
-	if (Alpha >= 1.f)
-	{
-		bTargetAssistActive = false;
-		// hand rotation back to the movement component
-		if (UCharacterMovementComponent* Move = GetCharacterMovement())
-		{
-			Move->bOrientRotationToMovement = bSavedOrientToMovement;
-		}
-	}
+	PreviousAssistAlpha = S;
+	if (Alpha >= 1.f) bTargetAssistStepIn = false;
+}
+
+void APlayableCharacter::CancelTargetAssist()
+{
+	AttackTrackingTarget.Reset();
+	if (!bTargetAssistActive) return;
+	bTargetAssistActive = false;
+	bTargetAssistStepIn = false;
+	if (UCharacterMovementComponent* Move = GetCharacterMovement())
+		Move->bOrientRotationToMovement = bSavedOrientToMovement;
+}
+
+void APlayableCharacter::PlayHitReact()
+{
+	CancelTargetAssist();
+	Super::PlayHitReact();
+}
+
+void APlayableCharacter::HandleDeath()
+{
+	CancelTargetAssist();
+	Super::HandleDeath();
 }
 
 void APlayableCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -225,6 +277,10 @@ const TArray<TObjectPtr<USoundBase>>& APlayableCharacter::GetHitVoiceLines() con
 
 void APlayableCharacter::UnPossessed()
 {
+	CancelTargetAssist();
+	bSprintHeld = false;
+	SprintMovementGraceRemaining = 0.f;
+	UpdateSprintAnimationState();
 	RemoveInputMapping();
 
 	Super::UnPossessed();
@@ -264,7 +320,10 @@ void APlayableCharacter::RemoveInputMapping()
 
 void APlayableCharacter::InputTagUseAbility(FGameplayTag InputTag)
 {
-	if (!AbilitySystemComponent->TryActivateAbilitiesByTag(FGameplayTagContainer(InputTag)))
+	if (!AbilitySystemComponent) return;
+
+	bool bAttackAccepted = AbilitySystemComponent->TryActivateAbilitiesByTag(FGameplayTagContainer(InputTag));
+	if (!bAttackAccepted)
 	{
 		for (FGameplayAbilitySpec& Spec : AbilitySystemComponent->GetActivatableAbilities())
 		{
@@ -275,9 +334,68 @@ void APlayableCharacter::InputTagUseAbility(FGameplayTag InputTag)
 			if (Instance)
 			{
 				Instance->InputPressed(Spec.Handle, AbilitySystemComponent->AbilityActorInfo.Get(), Spec.ActivationInfo);
+				bAttackAccepted = true;
 			}
 			break;
 		}
+	}
+
+	// Resolve the parry on the accepted button press, including presses during a combo.
+	// The later weapon notify remains responsible for normal attack damage only.
+	if (bAttackAccepted && InputTag == AbilityTags::Ability_Type_BaseAttack)
+	{
+		TryParryOnBasicAttackInput();
+	}
+}
+
+void APlayableCharacter::TryParryOnBasicAttackInput()
+{
+	if (!CharacterData || CharacterData->RangeTag == RangeTags::Character_Range_Ranged
+		|| CharacterData->ParryInputRange <= 0.f || !GetWorld()) return;
+
+	TArray<AActor*> Enemies;
+	UGameplayStatics::GetAllActorsOfClass(this, AEnemyCharacter::StaticClass(), Enemies);
+	const FVector PlayerLocation = GetActorLocation();
+	const float PlayerRadius = GetCapsuleComponent() ? GetCapsuleComponent()->GetScaledCapsuleRadius() : 0.f;
+	AEnemyCharacter* Nearest = nullptr;
+	float NearestDistance = TNumericLimits<float>::Max();
+
+	for (AActor* Actor : Enemies)
+	{
+		AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(Actor);
+		if (!Enemy || Enemy->IsDead() || Enemy->IsParryStunned()) continue;
+		UAbilitySystemComponent* EnemyASC = Enemy->GetAbilitySystemComponent();
+		if (!EnemyASC || !EnemyASC->HasMatchingGameplayTag(StateTags::Enemy_State_Parryable)) continue;
+
+		const UCapsuleComponent* EnemyCapsule = Enemy->GetCapsuleComponent();
+		const float EnemyRadius = EnemyCapsule ? EnemyCapsule->GetScaledCapsuleRadius() : 0.f;
+		const float HorizontalDistance = FMath::Max(0.f,
+			FVector::Dist2D(PlayerLocation, Enemy->GetActorLocation()) - PlayerRadius - EnemyRadius);
+		const float VerticalDistance = FMath::Max(0.f,
+			FMath::Abs(PlayerLocation.Z - Enemy->GetActorLocation().Z)
+			- (GetCapsuleComponent() ? GetCapsuleComponent()->GetScaledCapsuleHalfHeight() : 0.f)
+			- (EnemyCapsule ? EnemyCapsule->GetScaledCapsuleHalfHeight() : 0.f));
+		const float Distance = FMath::Sqrt(FMath::Square(HorizontalDistance) + FMath::Square(VerticalDistance));
+		if (Distance <= CharacterData->ParryInputRange && Distance < NearestDistance)
+		{
+			Nearest = Enemy;
+			NearestDistance = Distance;
+		}
+	}
+
+	if (!Nearest) return;
+	if (!Nearest->TryParry())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Parry] %s is in range and tagged, but no active parryable attack was found"), *Nearest->GetName());
+		return;
+	}
+
+	UE_LOG(LogTemp, Display, TEXT("[Parry] Input success: %s at %.0f cm from capsules"),
+		*Nearest->GetName(), NearestDistance);
+	if (UCombatFeedbackSubsystem* Feedback = GetWorld()->GetSubsystem<UCombatFeedbackSubsystem>())
+	{
+		Feedback->PlayParryFeedback(this, Nearest, Nearest->EnemyDataAsset
+			? Nearest->EnemyDataAsset->ParryFeedback : FParryFeedbackData());
 	}
 }
 
@@ -322,6 +440,9 @@ void APlayableCharacter::Look(const FInputActionValue& value)
 
 void APlayableCharacter::StartSprint()
 {
+	if (bSprintHeld) return;
+	bSprintHeld = true;
+
 	if (CharacterData)
 	{
 		if (UCharacterMovementComponent* Move = GetCharacterMovement())
@@ -333,11 +454,50 @@ void APlayableCharacter::StartSprint()
 
 void APlayableCharacter::StopSprint()
 {
+	if (!bSprintHeld) return;
+	bSprintHeld = false;
+	SprintMovementGraceRemaining = 0.f;
+
 	if (CharacterData)
 	{
 		if (UCharacterMovementComponent* Move = GetCharacterMovement())
 		{
 			Move->MaxWalkSpeed = CharacterData->WalkSpeed;
+		}
+	}
+}
+
+void APlayableCharacter::UpdateSprintAnimationState()
+{
+	UCharacterMovementComponent* Move = GetCharacterMovement();
+	UAnimInstance* Anim = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr;
+	if (!Move || !Anim) return;
+
+	const float MinMovingSpeed = FMath::Max(30.f, CharacterData ? CharacterData->WalkSpeed * 0.3f : 30.f);
+	// Acceleration can briefly reach zero while input and velocity are still sustained.
+	// Basing the state on it would switch SprintLoop to Walk for a single frame.
+	const bool bGrounded = Move->IsMovingOnGround();
+	if (bSprintHeld && bGrounded && Move->Velocity.Size2D() > MinMovingSpeed)
+	{
+		SprintMovementGraceRemaining = 0.12f;
+	}
+	else
+	{
+		SprintMovementGraceRemaining = FMath::Max(0.f,
+			SprintMovementGraceRemaining - (GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f));
+	}
+	const bool bSprintMoving = bSprintHeld && bGrounded && SprintMovementGraceRemaining > 0.f;
+	// ABP_Rover owns all sprint transitions. C++ only feeds its three transition flags.
+	const struct { const TCHAR* Name; bool Value; } Flags[] = {
+		{TEXT("bSprintMoving"), bSprintMoving},
+		{TEXT("bSprintStopped"), !bSprintMoving && bGrounded},
+		{TEXT("bSprintAirborne"), !bGrounded}
+	};
+	for (const auto& Flag : Flags)
+	{
+		if (FBoolProperty* Property = FindFProperty<FBoolProperty>(Anim->GetClass(), Flag.Name))
+		{
+			Property->SetPropertyValue_InContainer(Anim, Flag.Value);
 		}
 	}
 }
@@ -416,7 +576,7 @@ AEnemyCharacter* APlayableCharacter::AcquireTargetEnemy() const
 	const FVector Origin = GetActorLocation();
 
 	// aim reference = where the camera looks (flattened to the ground plane)
-	FVector AimDir = CameraComponent ? CameraComponent->GetForwardVector() : GetActorForwardVector();
+	FVector AimDir = Controller ? GetControlRotation().Vector() : GetActorForwardVector();
 	AimDir.Z = 0.f;
 	AimDir = AimDir.GetSafeNormal();
 
@@ -489,12 +649,17 @@ AEnemyCharacter* APlayableCharacter::AcquireTargetEnemy() const
 
 AEnemyCharacter* APlayableCharacter::FaceTargetForAttack()
 {
+	AEnemyCharacter* PreviousTarget = AttackTrackingTarget.Get();
+	CancelTargetAssist();
 	if (!CharacterData || !CharacterData->TargetAssist.bEnabled)
 	{
 		return nullptr;
 	}
 
-	AEnemyCharacter* Target = AcquireTargetEnemy();
+	AEnemyCharacter* Target = PreviousTarget && !PreviousTarget->IsDead()
+		&& FVector::DistSquared2D(GetActorLocation(), PreviousTarget->GetActorLocation())
+			<= FMath::Square(CharacterData->TargetAssist.Range)
+		? PreviousTarget : AcquireTargetEnemy();
 	if (!Target)
 	{
 		return nullptr;
@@ -502,6 +667,7 @@ AEnemyCharacter* APlayableCharacter::FaceTargetForAttack()
 
 	const FTargetAssistData& Cfg = CharacterData->TargetAssist;
 	const FVector Origin = GetActorLocation();
+	AttackTrackingTarget = Target;
 
 	FVector ToEnemy = Target->GetActorLocation() - Origin;
 	ToEnemy.Z = 0.f;
@@ -522,7 +688,7 @@ AEnemyCharacter* APlayableCharacter::FaceTargetForAttack()
 	bTargetAssistStepIn = false;
 	if (Cfg.bStepIn && Dist > Cfg.StopDistance)
 	{
-		const float Step = FMath::Min(Dist - Cfg.StopDistance, Cfg.MaxStepDistance);
+		const float Step = FMath::Max(0.f, FMath::Min3(Dist - Cfg.StopDistance, Cfg.MaxStepDistance, Cfg.ApproachDistanceLimit));
 		TargetAssistGoalLoc = Origin + Dir * Step;
 		bTargetAssistStepIn = true;
 	}
@@ -539,7 +705,9 @@ AEnemyCharacter* APlayableCharacter::FaceTargetForAttack()
 	}
 
 	TargetAssistElapsed = 0.f;
-	TargetAssistBlendTime = FMath::Max(Cfg.BlendTime, 0.01f);
+	PreviousAssistAlpha = 0.f;
+	TargetAssistBlendTime = FMath::Max3(Cfg.BlendTime, 0.01f,
+		static_cast<float>(FVector::Distance(TargetAssistStartLoc, TargetAssistGoalLoc)) * 1.5f / FMath::Max(1.f, Cfg.ApproachSpeedLimit));
 	bTargetAssistActive = true;
 
 	return Target;
