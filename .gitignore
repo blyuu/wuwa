@@ -88,3 +88,7 @@ DerivedDataCache/*
 # Portfolio drafts (working notes, not part of the repo docs)
 Docs/drafts/
 
+# Local development notes
+Docs/Developments/
+Docs/devlog/
+
