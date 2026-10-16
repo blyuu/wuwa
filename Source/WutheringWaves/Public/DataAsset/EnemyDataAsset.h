@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "Framework/CombatFeedbackSubsystem.h"
 #include "GameplayTags/WuwaGameplayTags.h"
 #include "EnemyDataAsset.generated.h"
 
@@ -101,6 +102,10 @@ public:
 	// Time before the enemy AI resumes after a successful parry (unless groggy takes over).
 	UPROPERTY(EditDefaultsOnly, Category = "Parry", meta = (ClampMin = "0.0"))
 	float ParryStaggerDuration = 0.5f;
+
+	// slow-mo / camera shake / VFX / sound played on a successful parry. Per-enemy so a boss can hit harder.
+	UPROPERTY(EditDefaultsOnly, Category = "Parry")
+	FParryFeedbackData ParryFeedback;
 
 	// enemy move speed (goes into CharacterMovement MaxWalkSpeed) player default is 600 so enemy usually lower
 	UPROPERTY(EditDefaultsOnly)

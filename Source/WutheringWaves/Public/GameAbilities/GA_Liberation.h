@@ -4,7 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "GameAbilities/GA_ResonanceSkill.h"
+#include "TimerManager.h"
 #include "GA_Liberation.generated.h"
+
+class ACameraActor;
+class APlayerController;
+class ULiberationCutinWidget;
+class AWuwaHUD;
 
 /**
  * Ultimate (Resonance Liberation).
@@ -32,4 +38,30 @@ public:
 	// consume the gauge, then run the shared skill flow
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+
+	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
+
+protected:
+	UPROPERTY(EditDefaultsOnly, Category = "Liberation|Cutin")
+	bool bPlayCutin = true;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Liberation|Cutin", meta = (ClampMin = "0.2", ClampMax = "5.0"))
+	float CutinDuration = 1.6f;
+
+private:
+	void StartCutin();
+	void FinishCutin();
+	void CleanupCutin();
+
+	UPROPERTY(Transient)
+	TObjectPtr<ACameraActor> CutinCamera;
+
+	UPROPERTY(Transient)
+	TObjectPtr<ULiberationCutinWidget> CutinWidget;
+
+	TWeakObjectPtr<APlayerController> CutinPlayerController;
+	TWeakObjectPtr<AWuwaHUD> HiddenHud;
+	TWeakObjectPtr<AActor> PreviousViewTarget;
+	FTimerHandle CutinTimer;
 };

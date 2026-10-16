@@ -217,6 +217,7 @@ void UGA_ResonanceSkill::EndAbility(const FGameplayAbilitySpecHandle Handle, con
 
 	if (APlayableCharacter* Character = Cast<APlayableCharacter>(ActorInfo->AvatarActor))
 	{
+		Character->CancelTargetAssist();
 		if (Character->CurrentWeapon)
 		{
 			Character->CurrentWeapon->HideWeapon();

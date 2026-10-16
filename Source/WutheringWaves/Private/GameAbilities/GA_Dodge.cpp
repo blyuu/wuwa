@@ -35,6 +35,7 @@ void UGA_Dodge::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
 
 	// Montages are per-character data, pulled from the data asset (same pattern as GA_BaseAttack).
 	const FDodgeData& Dodge = Character->CharacterData->Dodge;
+	Character->CancelTargetAssist();
 
 	// Movement input still held this frame (world space). Zero == no direction key pressed.
 	const FVector MoveInput = Character->GetLastMovementInputVector();

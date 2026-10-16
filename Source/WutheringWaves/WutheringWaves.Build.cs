@@ -14,7 +14,7 @@ public class WutheringWaves : ModuleRules
 		});
 
 		// Slate/SlateCore: needed to touch FSlateBrush / FProgressBarStyle directly (per-character bar fill image)
-		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore", "EngineCameras" });
 		
 		// Uncomment if you are using online features
 		// PrivateDependencyModuleNames.Add("OnlineSubsystem");

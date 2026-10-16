@@ -122,9 +122,22 @@ struct FTargetAssistData
 	UPROPERTY(EditDefaultsOnly)
 	float MaxStepDistance = 400.f;
 
+	// Additional cap also applies to older assets with large MaxStepDistance values.
+	UPROPERTY(EditDefaultsOnly, meta = (ClampMin = "0.0", Units = "cm"))
+	float ApproachDistanceLimit = 100.f;
+
+	UPROPERTY(EditDefaultsOnly, meta = (ClampMin = "1.0"))
+	float ApproachSpeedLimit = 450.f;
+
 	// seconds the turn / step-in blend runs
 	UPROPERTY(EditDefaultsOnly)
 	float BlendTime = 0.18f;
+
+	UPROPERTY(EditDefaultsOnly, meta = (ClampMin = "0.0", Units = "deg/s"))
+	float InitialTurnSpeed = 900.f;
+
+	UPROPERTY(EditDefaultsOnly, meta = (ClampMin = "0.0", Units = "deg/s"))
+	float TrackingTurnSpeed = 180.f;
 };
 
 // Dodge has one input but three montages picked by situation, so it gets its own
@@ -201,6 +214,10 @@ public:
 	// auto-target ("soft lock") behaviour when this character attacks
 	UPROPERTY(EditDefaultsOnly, Category = "Targeting")
 	FTargetAssistData TargetAssist;
+
+	// Basic-attack input can parry an active parryable enemy this far from its capsule surface.
+	UPROPERTY(EditDefaultsOnly, Category = "Parry", meta = (ClampMin = "0.0", Units = "cm"))
+	float ParryInputRange = 250.f;
 
 	
 	// max 변주 게이지 (charged-swap circuit). The gauge fills to this on hits.

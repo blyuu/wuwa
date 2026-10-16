@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Components/Widget.h"
 #include "GameFramework/HUD.h"
 #include "WuwaHUD.generated.h"
 
@@ -30,6 +31,9 @@ public:
 	// Boss bar: shown when a boss spawns, hidden when it dies. Called by AEnemyCharacter.
 	void ShowBossBar(AEnemyCharacter* Boss);
 	void HideBossBar();
+
+	// Temporarily suppress HUD widgets during the local liberation cut-in.
+	void SetCinematicHudHidden(bool bShouldHide);
 
 protected:
 	virtual void BeginPlay() override;
@@ -71,4 +75,9 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UTeamPortraitWidget> TeamPortraitWidget;
+
+	bool bCinematicHudHidden = false;
+	ESlateVisibility SavedOverlayVisibility = ESlateVisibility::Visible;
+	ESlateVisibility SavedPortraitVisibility = ESlateVisibility::Visible;
+	ESlateVisibility SavedBossVisibility = ESlateVisibility::Visible;
 };

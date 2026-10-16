@@ -138,6 +138,10 @@ private:
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UImage> LiberationCooldown;
 
+	// Element-colored rim shown while the ultimate is cooling down.
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UImage> LiberationCooldownRim;
+
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> ResonanceSkillCooldownText;
 

@@ -14,6 +14,21 @@
 #include "GameFramework/PlayerController.h"
 #include "Engine/World.h"
 
+void AWuwaHUD::SetCinematicHudHidden(bool bShouldHide)
+{
+	if (bCinematicHudHidden == bShouldHide) return;
+	bCinematicHudHidden = bShouldHide;
+	if (bShouldHide)
+	{
+		if (OverlayWidget) SavedOverlayVisibility = OverlayWidget->GetVisibility();
+		if (TeamPortraitWidget) SavedPortraitVisibility = TeamPortraitWidget->GetVisibility();
+		if (BossWidget) SavedBossVisibility = BossWidget->GetVisibility();
+	}
+	if (OverlayWidget) OverlayWidget->SetVisibility(bShouldHide ? ESlateVisibility::Hidden : SavedOverlayVisibility);
+	if (TeamPortraitWidget) TeamPortraitWidget->SetVisibility(bShouldHide ? ESlateVisibility::Hidden : SavedPortraitVisibility);
+	if (BossWidget) BossWidget->SetVisibility(bShouldHide ? ESlateVisibility::Hidden : SavedBossVisibility);
+}
+
 void AWuwaHUD::BeginPlay()
 {
 	Super::BeginPlay();

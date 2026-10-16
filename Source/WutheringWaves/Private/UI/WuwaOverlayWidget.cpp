@@ -161,6 +161,10 @@ void UWuwaOverlayWidget::ApplyElementColor(const FGameplayTag& ElementTag)
 			UltimateGaugeMID->SetVectorParameterValue(GaugeColorParam, Color);
 		}
 	}
+	if (LiberationCooldownRim)
+	{
+		LiberationCooldownRim->SetColorAndOpacity(Color);
+	}
 }
 
 void UWuwaOverlayWidget::NativeDestruct()
@@ -176,6 +180,13 @@ void UWuwaOverlayWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTi
 	// cooldowns are time-based, so poll them each frame (attribute delegates don't fire per-tick)
 	UpdateCooldown(ResonanceSkillCooldown, ResonanceSkillCooldownText, SkillCooldownMID, CooldownTags::Cooldown_ResonanceSkill);
 	UpdateCooldown(LiberationCooldown, LiberationCooldownText, LiberationCooldownMID, CooldownTags::Cooldown_Liberation);
+	if (LiberationCooldownRim)
+	{
+		const bool bLiberationCoolingDown = LiberationCooldown
+			&& LiberationCooldown->GetVisibility() == ESlateVisibility::HitTestInvisible;
+		LiberationCooldownRim->SetVisibility(bLiberationCoolingDown
+			? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+	}
 
 	// buff icon above the HP bar: shown while the active character's attack power is boosted (수수's team buff)
 	if (BuffIcon)
