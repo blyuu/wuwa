@@ -17,6 +17,18 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 
+namespace
+{
+	void AddResonanceForSwing(UAbilitySystemComponent* ASC, const FSkillData* Skill)
+	{
+		if (ASC && Skill && Skill->ResonanceGain > 0.f)
+		{
+			ASC->ApplyModToAttribute(UWuWa_AttributeSetBase::GetResonanceEnergyAttribute(),
+				EGameplayModOp::Additive, Skill->ResonanceGain);
+		}
+	}
+}
+
 UGA_BaseAttack::UGA_BaseAttack()
 {
 	// 액터마다 인스턴스를 하나씩 둬서, 콤보 진행 상태(CurrentComboIndex 등) 같은 멤버 변수를 캐릭터별로 안전하게 유지한다.
@@ -56,6 +68,12 @@ void UGA_BaseAttack::AdvanceCombo()
 	// A section with no next link begins blending out before its end. Jump while the
 	// combo window is open, as the working combo did before the movement change.
 	AnimInstance->Montage_JumpToSection(NextSection, CurrentMontage);
+	if (const APlayableCharacter* Character = Cast<APlayableCharacter>(GetAvatarActorFromActorInfo()))
+	{
+		const FSkillData* Skill = Character->CharacterData
+			? Character->CharacterData->Skills.Find(GetAssetTags().First()) : nullptr;
+		AddResonanceForSwing(GetAbilitySystemComponentFromActorInfo(), Skill);
+	}
 	CurrentComboIndex = Index + 1;
 	bWindowIsOpen = false;
 	bComboInputBuffered = false;
@@ -122,6 +140,7 @@ void UGA_BaseAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, co
 	PlayBaseAttackMontageTask->OnInterrupted.AddDynamic(this,&UGA_BaseAttack::EndMontage);
 	PlayBaseAttackMontageTask->ReadyForActivation();
 	if (!IsActive()) return;
+	AddResonanceForSwing(GetAbilitySystemComponentFromActorInfo(), Skill);
 
 	CurrentComboIndex = 0;
 	bComboInputBuffered = false;

@@ -194,6 +194,13 @@ void UGA_ResonanceSkill::OnHitEvent(FGameplayEventData Payload)
 	}
 
 	// gain 변주 게이지 if this skill grants it
+	if (SourceASC && Skill->ResonanceGain > 0.f)
+	{
+		SourceASC->ApplyModToAttribute(
+			UWuWa_AttributeSetBase::GetResonanceEnergyAttribute(),
+			EGameplayModOp::Additive, Skill->ResonanceGain);
+	}
+
 	if (SourceASC && Skill->VariationGain > 0.f)
 	{
 		SourceASC->ApplyModToAttribute(
