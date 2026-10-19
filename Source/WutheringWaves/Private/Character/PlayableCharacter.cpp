@@ -43,9 +43,10 @@ APlayableCharacter::APlayableCharacter()
 	SpringArmComponent = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 
 	SpringArmComponent->SetupAttachment(RootComponent);
-	SpringArmComponent->TargetArmLength = 400.0f;
+	SpringArmComponent->TargetArmLength = 325.0f;
 
 	CameraComponent->SetupAttachment(SpringArmComponent);
+	CameraComponent->FieldOfView = 102.f;
 
 	SpringArmComponent->bUsePawnControlRotation = true;
 	CameraComponent->bUsePawnControlRotation = false;
@@ -182,9 +183,9 @@ void APlayableCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 
 void APlayableCharacter::PossessedBy(AController* NewController)
 {
-	// Character Base : InitAbilityActorInfo + GiveAbilites 
+	// Character Base : InitAbilityActorInfo + GiveAbilites
 	Super::PossessedBy(NewController);
-	
+
 	// no data asset -> HP/level/skills/etc. can't be applied. Warn loudly instead of silently using defaults,
 	// since "one character has wrong HP and level" almost always means its CharacterData slot is empty.
 	if (!CharacterData)

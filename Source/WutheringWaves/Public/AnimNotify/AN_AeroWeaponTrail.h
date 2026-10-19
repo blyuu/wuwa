@@ -5,7 +5,7 @@
 
 class UNiagaraSystem;
 class UMaterialInterface;
-
+ 
 /** Cosmetic window for existing montages. Each character owns its sampling history. */
 UCLASS(meta=(DisplayName="Aero Rover - Sword Wind Trail"))
 class WUTHERINGWAVES_API UAN_AeroWeaponTrail : public UAnimNotifyState

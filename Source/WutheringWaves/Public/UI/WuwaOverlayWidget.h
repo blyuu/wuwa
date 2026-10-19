@@ -40,10 +40,14 @@ public:
 	void SetSkillIcons(const UCharacterDataAsset* Data);
 
 protected:
+	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
 
 	// polls the active character's skill/ultimate cooldowns each frame and drives the cooldown UI
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+	virtual int32 NativePaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry,
+		const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements,
+		int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const override;
 
 	//========================================================================
 	// Implement these in the WBP subclass to actually update the widgets.
@@ -107,9 +111,21 @@ private:
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UImage> ElementIcon;
 
-	// per-character 공명 회로 energy image - set from the active character's data asset (like the skill icons). Optional.
+	// Shared 45-tick resonance circuit art above HP. Colored ticks are painted over it at runtime.
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UImage> ResonanceCircuitImage;
+
+	float CircuitPercent = 0.f;
+	FLinearColor CircuitColor = FLinearColor::White;
+	float CircuitSpectrumTime = 0.f;
+	float CircuitSpectrumFade = 0.f;
+
+	// Subtle spectrum animation behind the circuit only while its energy is full.
+	UPROPERTY(EditAnywhere, Category = "HUD|Resonance Circuit", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float CircuitSpectrumStrength = 0.22f;
+
+	UPROPERTY(EditAnywhere, Category = "HUD|Resonance Circuit", meta = (ClampMin = "0.1", ClampMax = "5.0"))
+	float CircuitSpectrumSpeed = 1.0f;
 
 	// "current / max HP" text drawn inside the health bar. Optional.
 	UPROPERTY(meta = (BindWidgetOptional))

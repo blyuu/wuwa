@@ -62,6 +62,10 @@ struct FSkillData
 	UPROPERTY(EditDefaultsOnly)
 	float VariationGain = 0.f;
 
+	// Amount added to the shared segmented resonance circuit for each basic attack swing/skill hit.
+	UPROPERTY(EditDefaultsOnly)
+	float ResonanceGain = 8.f;
+
 	// 궁극기 효율 게이지 the attacker gains when this skill hits (fills toward the ultimate/liberation)
 	UPROPERTY(EditDefaultsOnly)
 	float UltimateGain = 0.f;
@@ -187,7 +191,7 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<class UTexture2D> Portrait;
 
-	// per-character 공명 회로 image shown behind/around the resonance energy bar. Texture2D or Paper2D Sprite.
+	// Legacy per-character circuit image. The HUD now uses one shared segmented image for everyone.
 	UPROPERTY(EditDefaultsOnly, meta = (AllowedClasses = "/Script/Engine.Texture2D, /Script/Paper2D.PaperSprite"))
 	TObjectPtr<UObject> ResonanceCircuitIcon;
 

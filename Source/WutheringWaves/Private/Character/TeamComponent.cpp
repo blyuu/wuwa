@@ -5,6 +5,7 @@
 
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/GameModeBase.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayEffect.h"
@@ -90,6 +91,10 @@ void UTeamComponent::InitializeTeam()
 	ActivateCharacter(SpawnedTeam[0]);
 	PC->Possess(SpawnedTeam[0]);
 
+	// AController::Possess() sets ControlRotation to the pawn's actor rotation
+	// (pitch 0) right after calling PossessedBy(), so the starting look-down
+	// angle has to be set here, after Possess(), not inside PossessedBy.
+	PC->SetControlRotation(FRotator(-18.f, PC->GetControlRotation().Yaw, 0.f));
 	// Point the HUD at the starting character (no-op if the HUD isn't up yet - it seeds itself in BeginPlay)
 	if (AWuwaHUD* HUD = Cast<AWuwaHUD>(PC->GetHUD()))
 	{
@@ -169,8 +174,11 @@ void UTeamComponent::DoSwap(int32 Index)
 		return;
 	}
 
-	// keep the camera facing across the swap
+	// keep the camera facing and zoom across the swap
 	const FRotator SavedControlRotation = PC->GetControlRotation();
+	const float SavedArmLength = Outgoing && Outgoing->GetSpringArmComponent()
+		? Outgoing->GetSpringArmComponent()->TargetArmLength
+		: 0.f;
 
 	if (Outgoing)
 	{
@@ -181,6 +189,10 @@ void UTeamComponent::DoSwap(int32 Index)
 	ActivateCharacter(Incoming);
 	PC->Possess(Incoming);
 	PC->SetControlRotation(SavedControlRotation);
+	if (Outgoing && Incoming->GetSpringArmComponent())
+	{
+		Incoming->GetSpringArmComponent()->TargetArmLength = SavedArmLength;
+	}
 	ActiveIndex = Index;
 
 	// Rebind the HUD to the newly active character

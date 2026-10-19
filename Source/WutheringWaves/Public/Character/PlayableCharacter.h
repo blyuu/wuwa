@@ -22,6 +22,8 @@ public:
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	FORCEINLINE class USpringArmComponent* GetSpringArmComponent() const { return SpringArmComponent; }
+
 protected:
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void UnPossessed() override;
